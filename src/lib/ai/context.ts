@@ -38,7 +38,7 @@ export async function buildDailyContext(date: string): Promise<DailyContext> {
       delayed:   orders.filter((o) => o.status === "delayed").length,
     },
     inventory: inventory.map((i) => {
-      const p = i.products as { name: string; critical_stock_level: number };
+      const p = (Array.isArray(i.products) ? i.products[0] : i.products) as unknown as { name: string; critical_stock_level: number };
       return {
         name:        p.name,
         quantity:    i.current_quantity,
@@ -52,8 +52,8 @@ export async function buildDailyContext(date: string): Promise<DailyContext> {
       todo:  tasks.filter((t) => t.status === "todo" || t.status === "in_progress").length,
     },
     harvests: harvests.map((h) => ({
-      producer: (h.profiles as { full_name: string })?.full_name ?? "Bilinmeyen",
-      product:  (h.products as { name: string })?.name ?? "Bilinmeyen",
+      producer: ((Array.isArray(h.profiles) ? h.profiles[0] : h.profiles) as unknown as { full_name: string })?.full_name ?? "Bilinmeyen",
+      product:  ((Array.isArray(h.products) ? h.products[0] : h.products) as unknown as { name: string })?.name ?? "Bilinmeyen",
       quantity: h.quantity,
       unit:     h.unit,
       status:   h.status,

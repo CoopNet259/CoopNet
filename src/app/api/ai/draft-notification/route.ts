@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Sipariş bulunamadı" }, { status: 404 });
   }
 
-  const product = order.products as { name: string };
+  const product = (Array.isArray(order.products) ? order.products[0] : order.products) as unknown as { name: string };
   const model = getModel();
 
   const result = await model.generateContent({
