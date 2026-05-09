@@ -1,0 +1,40 @@
+{
+  "name": "coopnet",
+  "version": "1.0.0",
+  "description": "An AI-powered orchestrator agent for cooperatives. Automates inventory tracking, task delegation, and communication workflows using a Single LLM and Tool Calling architecture.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aslanbaris13/CoopNet.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/aslanbaris13/CoopNet/issues"
+  },
+  "homepage": "https://github.com/aslanbaris13/CoopNet#readme",
+  "dependencies": {
+    "next": "^15.5.18",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.0",
+    "@types/node": "^25.6.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.5.0",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.6",
+    "postcss": "^8.5.14",
+    "tailwindcss": "^4.3.0",
+    "typescript": "^5.9.3"
+  }
+}
