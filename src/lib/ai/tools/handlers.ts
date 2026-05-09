@@ -1,49 +1,65 @@
-// Şu an mock veri kullanıyoruz.
-// Supabase kurulunca bu fonksiyonlar gerçek DB sorgularıyla değişecek.
-
-const mockInventory: Record<string, { quantity: number; unit: string; critical_level: number; updated_at: string }> = {
-  domates: { quantity: 45, unit: "kg", critical_level: 50, updated_at: "2026-05-10T08:00:00" },
-  biber:   { quantity: 12, unit: "kg", critical_level: 30, updated_at: "2026-05-10T07:30:00" },
-  elma:    { quantity: 200, unit: "kg", critical_level: 80, updated_at: "2026-05-10T09:00:00" },
-  patates: { quantity: 8,  unit: "kg", critical_level: 40, updated_at: "2026-05-10T06:00:00" },
-};
+import { createServerClient } from "@/lib/supabase/client";
 
 export async function get_stock({ product_name }: { product_name: string }) {
-  const key = product_name.toLowerCase();
-  const item = mockInventory[key];
+  const supabase = createServerClient();
 
-  if (!item) {
-    return { error: `'${product_name}' ürünü bulunamadı.` };
-  }
+  // Önce products tablosundan ürünü bul
+  const { data: product, error: pErr } = await supabase
+    .from("products")
+    .select("id, name, unit, critical_stock_level")
+    .ilike("name", `%${product_name}%`)
+    .single();
+
+  if (pErr || !product) return { error: `'${product_name}' ürünü bulunamadı.` };
+
+  // Sonra inventory'den stok miktarını çek
+  const { data: inv } = await supabase
+    .from("inventory")
+    .select("current_quantity, updated_at, unit")
+    .eq("product_id", product.id)
+    .single();
 
   return {
-    product_name,
-    quantity: item.quantity,
-    unit: item.unit,
-    updated_at: item.updated_at,
+    product_name: product.name,
+    quantity: inv?.current_quantity ?? 0,
+    unit: inv?.unit ?? product.unit,
+    updated_at: inv?.updated_at ?? null,
   };
 }
 
 export async function check_threshold({ product_name }: { product_name: string }) {
-  const key = product_name.toLowerCase();
-  const item = mockInventory[key];
+  const supabase = createServerClient();
 
-  if (!item) {
-    return { error: `'${product_name}' ürünü bulunamadı.` };
-  }
+  const { data: product, error: pErr } = await supabase
+    .from("products")
+    .select("id, name, unit, critical_stock_level")
+    .ilike("name", `%${product_name}%`)
+    .single();
 
-  const is_critical = item.quantity <= item.critical_level;
-  const fill_percentage = Math.round((item.quantity / item.critical_level) * 100);
+  if (pErr || !product) return { error: `'${product_name}' ürünü bulunamadı.` };
+
+  const { data: inv } = await supabase
+    .from("inventory")
+    .select("current_quantity, unit")
+    .eq("product_id", product.id)
+    .single();
+
+  const current = inv?.current_quantity ?? 0;
+  const unit = inv?.unit ?? product.unit;
+  const is_critical = current <= product.critical_stock_level;
+  const fill_percentage = product.critical_stock_level > 0
+    ? Math.round((current / product.critical_stock_level) * 100)
+    : 100;
 
   return {
-    product_name,
+    product_name: product.name,
     is_critical,
     fill_percentage,
-    current_quantity: item.quantity,
-    critical_level: item.critical_level,
-    unit: item.unit,
+    current_quantity: current,
+    critical_level: product.critical_stock_level,
+    unit,
     recommendation: is_critical
-      ? `Acil sipariş gerekli. Mevcut ${item.quantity}${item.unit}, eşik ${item.critical_level}${item.unit}.`
+      ? `Acil sipariş gerekli. Mevcut ${current} ${unit}, eşik ${product.critical_stock_level} ${unit}.`
       : `Stok yeterli. Doluluk %${fill_percentage}.`,
   };
 }

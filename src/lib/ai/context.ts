@@ -1,5 +1,4 @@
-// Supabase gelince bu fonksiyonlar gerçek DB sorgularıyla değişecek.
-// Şimdilik mock veri kullanıyoruz — yapı aynı kalacak.
+import { createServerClient } from "@/lib/supabase/client";
 
 export interface DailyContext {
   date: string;
@@ -10,33 +9,54 @@ export interface DailyContext {
 }
 
 export async function buildDailyContext(date: string): Promise<DailyContext> {
-  // TODO: Supabase gelince:
-  // const supabase = createClient();
-  // const orders = await supabase.from("orders").select(...).eq("date", date);
-  // ...
+  const supabase = createServerClient();
+  const start = `${date}T00:00:00`;
+  const end   = `${date}T23:59:59`;
+
+  const [ordersRes, inventoryRes, tasksRes, harvestsRes] = await Promise.all([
+    supabase.from("orders").select("status").gte("created_at", start).lte("created_at", end),
+    supabase.from("inventory").select("current_quantity, unit, products(name, critical_stock_level)"),
+    supabase.from("tasks").select("status").gte("created_at", start).lte("created_at", end),
+    supabase
+      .from("producer_product_reports")
+      .select("quantity, unit, status, profiles(full_name), products(name)")
+      .gte("created_at", start)
+      .lte("created_at", end),
+  ]);
+
+  const orders = ordersRes.data ?? [];
+  const inventory = inventoryRes.data ?? [];
+  const tasks = tasksRes.data ?? [];
+  const harvests = harvestsRes.data ?? [];
 
   return {
     date,
     orders: {
-      total: 14,
-      pending: 3,
-      delivered: 9,
-      delayed: 2,
+      total:     orders.length,
+      pending:   orders.filter((o) => o.status === "pending").length,
+      delivered: orders.filter((o) => o.status === "delivered").length,
+      delayed:   orders.filter((o) => o.status === "delayed").length,
     },
-    inventory: [
-      { name: "Domates", quantity: 245, unit: "kg", is_critical: false },
-      { name: "Biber",   quantity: 12,  unit: "kg", is_critical: true  },
-      { name: "Elma",    quantity: 200, unit: "kg", is_critical: false },
-      { name: "Patates", quantity: 8,   unit: "kg", is_critical: true  },
-    ],
+    inventory: inventory.map((i) => {
+      const p = i.products as { name: string; critical_stock_level: number };
+      return {
+        name:        p.name,
+        quantity:    i.current_quantity,
+        unit:        i.unit,
+        is_critical: i.current_quantity <= p.critical_stock_level,
+      };
+    }),
     tasks: {
-      total: 8,
-      done: 6,
-      todo: 2,
+      total: tasks.length,
+      done:  tasks.filter((t) => t.status === "done").length,
+      todo:  tasks.filter((t) => t.status === "todo" || t.status === "in_progress").length,
     },
-    harvests: [
-      { producer: "Ahmet Yılmaz", product: "Domates", quantity: 200, unit: "kg", status: "processed" },
-      { producer: "Fatma Demir",  product: "Biber",   quantity: 30,  unit: "kg", status: "pending"   },
-    ],
+    harvests: harvests.map((h) => ({
+      producer: (h.profiles as { full_name: string })?.full_name ?? "Bilinmeyen",
+      product:  (h.products as { name: string })?.name ?? "Bilinmeyen",
+      quantity: h.quantity,
+      unit:     h.unit,
+      status:   h.status,
+    })),
   };
 }
