@@ -10,6 +10,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const date = body.date ?? new Date().toISOString().split("T")[0];
 
+  try {
   // Günün verisini topla
   const context = await buildDailyContext(date);
 
@@ -71,9 +72,17 @@ Türkçe yaz. Her madde kısa ve eyleme dönüştürülebilir olsun.`,
 
   await logAI({
     input_text: `daily_summary_${date}`,
-    output_json: response,
+    output_data: response,
     action_type: "daily_summary",
   });
 
   return NextResponse.json(response);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const isRateLimit = msg.includes("429") || msg.toLowerCase().includes("quota");
+    return NextResponse.json(
+      { error: isRateLimit ? "AI şu an yoğun, lütfen birkaç saniye bekleyip tekrar deneyin." : "Günlük özet oluşturulamadı." },
+      { status: isRateLimit ? 429 : 500 }
+    );
+  }
 }

@@ -27,6 +27,8 @@ export async function POST(req: NextRequest) {
   }
 
   const product = (Array.isArray(order.products) ? order.products[0] : order.products) as unknown as { name: string };
+
+  try {
   const model = getModel();
 
   const result = await model.generateContent({
@@ -67,9 +69,17 @@ Kısa tut, samimi ol, Türkçe yaz.`,
 
   await logAI({
     input_text: `draft_notification: order_id=${order_id}`,
-    output_json: { order_id, order, draft },
+    output_data: { order_id, order, draft },
     action_type: "draft_notification",
   });
 
   return NextResponse.json(draft);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const isRateLimit = msg.includes("429") || msg.toLowerCase().includes("quota");
+    return NextResponse.json(
+      { error: isRateLimit ? "AI şu an yoğun, lütfen birkaç saniye bekleyip tekrar deneyin." : "Bildirim taslağı oluşturulamadı." },
+      { status: isRateLimit ? 429 : 500 }
+    );
+  }
 }

@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "product_name ve quantity gerekli" }, { status: 400 });
   }
 
+  try {
   const model = getModel();
 
   const result = await model.generateContent({
@@ -46,9 +47,17 @@ Kurallar:
 
   await logAI({
     input_text: `draft_email: ${product_name} ${quantity}${unit}`,
-    output_json: draft,
+    output_data: draft,
     action_type: "draft_email",
   });
 
   return NextResponse.json(draft);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const isRateLimit = msg.includes("429") || msg.toLowerCase().includes("quota");
+    return NextResponse.json(
+      { error: isRateLimit ? "AI şu an yoğun, lütfen birkaç saniye bekleyip tekrar deneyin." : "Mail taslağı oluşturulamadı." },
+      { status: isRateLimit ? 429 : 500 }
+    );
+  }
 }

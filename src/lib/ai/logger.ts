@@ -2,7 +2,7 @@ import { createServerClient } from "@/lib/supabase/client";
 
 export interface LogEntry {
   input_text: string;
-  output_json: unknown;
+  output_data: unknown;
   action_type: "harvest_analyze" | "chat" | "daily_summary" | "draft_email" | "draft_notification";
   created_by?: string;
 }
@@ -11,7 +11,7 @@ export async function logAI(entry: LogEntry): Promise<void> {
   const record = {
     action_type: entry.action_type,
     input_text: entry.input_text,
-    output_data: entry.output_json,
+    output_data: entry.output_data,
     status: "success",
     created_at: new Date().toISOString(),
   };

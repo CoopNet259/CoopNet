@@ -166,13 +166,22 @@ export async function get_sales_forecast({
 }) {
   const supabase = createServerClient();
 
+  // Önce product_id bul — join üzerinden ilike filtresi Supabase'de çalışmaz
+  const { data: product, error: pErr } = await supabase
+    .from("products")
+    .select("id, name")
+    .ilike("name", `%${product_name}%`)
+    .single();
+
+  if (pErr || !product) return { error: `'${product_name}' ürünü bulunamadı.` };
+
   const since = new Date();
   since.setDate(since.getDate() - 30);
 
   const { data: orders } = await supabase
     .from("orders")
-    .select("quantity, products(name)")
-    .ilike("products.name", `%${product_name}%`)
+    .select("quantity")
+    .eq("product_id", product.id)
     .gte("created_at", since.toISOString())
     .eq("status", "delivered");
 
@@ -181,12 +190,12 @@ export async function get_sales_forecast({
   const forecast = Math.round(dailyAvg * days);
 
   return {
-    product_name,
+    product_name: product.name,
     forecast_days: days,
     estimated_demand: forecast,
     daily_average: Math.round(dailyAvg),
     based_on_days: 30,
-    note: orders?.length === 0
+    note: (orders ?? []).length === 0
       ? "Geçmiş satış verisi yok, tahmin güvenilir değil"
       : `Son 30 günde ${totalSold} kg satıldı`,
   };

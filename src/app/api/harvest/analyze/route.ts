@@ -39,11 +39,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "message gerekli" }, { status: 400 });
   }
 
-  // Aşama 1: Mesajı parse et
-  const parsed = await parseHarvestMessage(message);
+  try {
+    // Aşama 1: Mesajı parse et
+    const parsed = await parseHarvestMessage(message);
 
-  // Aşama 2: Orchestrator ile stok analizi yap
-  const agentPrompt = `Üretici şunu bildirdi: "${message}"
+    // Aşama 2: Orchestrator ile stok analizi yap
+    const agentPrompt = `Üretici şunu bildirdi: "${message}"
 
 Çıkardığım bilgi: ${parsed.quantity} ${parsed.unit} ${parsed.product_name} hazır,
 getirme zamanı: ${parsed.available_time ?? "belirtilmemiş"}.
@@ -53,23 +54,30 @@ getirme zamanı: ${parsed.available_time ?? "belirtilmemiş"}.
 2. Kritik eşiğe bak
 3. Ne yapılması gerektiğini söyle`;
 
-  const agentResult = await runAgent(agentPrompt);
+    const agentResult = await runAgent(agentPrompt);
 
-  // İki aşamanın sonuçlarını birleştir
-  const response: HarvestAnalysisResult = {
-    parsed,
-    stock_status: extractStockStatus(agentResult.toolCalls),
-    recommendation: agentResult.text,
-    actions: deriveActions(parsed, agentResult.toolCalls),
-  };
+    const response: HarvestAnalysisResult = {
+      parsed,
+      stock_status: extractStockStatus(agentResult.toolCalls),
+      recommendation: agentResult.text,
+      actions: deriveActions(parsed, agentResult.toolCalls),
+    };
 
-  await logAI({
-    input_text: message,
-    output_json: response,
-    action_type: "harvest_analyze",
-  });
+    await logAI({
+      input_text: message,
+      output_data: response,
+      action_type: "harvest_analyze",
+    });
 
-  return NextResponse.json(response);
+    return NextResponse.json(response);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const isRateLimit = msg.includes("429") || msg.toLowerCase().includes("quota");
+    return NextResponse.json(
+      { error: isRateLimit ? "AI şu an yoğun, lütfen birkaç saniye bekleyip tekrar deneyin." : "Hasat analizi yapılamadı." },
+      { status: isRateLimit ? 429 : 500 }
+    );
+  }
 }
 
 // Tool çağrılarından stok durumunu çıkar

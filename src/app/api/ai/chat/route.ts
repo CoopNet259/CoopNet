@@ -11,6 +11,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "message gerekli" }, { status: 400 });
   }
 
-  const result = await runAgent(message);
-  return NextResponse.json(result);
+  try {
+    const result = await runAgent(message);
+    return NextResponse.json(result);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const isRateLimit = msg.includes("429") || msg.toLowerCase().includes("quota");
+    return NextResponse.json(
+      { error: isRateLimit ? "AI şu an yoğun, lütfen birkaç saniye bekleyip tekrar deneyin." : "AI yanıt üretemedi." },
+      { status: isRateLimit ? 429 : 500 }
+    );
+  }
 }
