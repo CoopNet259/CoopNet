@@ -1,6 +1,7 @@
 import { getModel } from "./client";
 import { toolDefinitions } from "./tools/definitions";
 import { executeToolCall } from "./tools/handlers";
+import { logAI } from "./logger";
 
 export interface AgentResult {
   text: string;
@@ -35,10 +36,18 @@ Kurallar:
 
     // AI tool istemedi → nihai cevabı döndür
     if (!functionCalls || functionCalls.length === 0) {
-      return {
+      const result = {
         text: response.response.text(),
         toolCalls,
       };
+
+      await logAI({
+        input_text: userMessage,
+        output_json: result,
+        action_type: "chat",
+      });
+
+      return result;
     }
 
     // Her tool'u çalıştır ve sonuçları topla

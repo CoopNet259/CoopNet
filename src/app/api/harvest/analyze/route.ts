@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getModel } from "@/lib/ai/client";
 import { runAgent } from "@/lib/ai/orchestrator";
+import { logAI } from "@/lib/ai/logger";
 import type { ParsedHarvest, HarvestAnalysisResult } from "@/lib/ai/types";
 
 // Aşama 1: Türkçe mesajdan ürün/miktar/zaman çıkar
@@ -61,6 +62,12 @@ getirme zamanı: ${parsed.available_time ?? "belirtilmemiş"}.
     recommendation: agentResult.text,
     actions: deriveActions(parsed, agentResult.toolCalls),
   };
+
+  await logAI({
+    input_text: message,
+    output_json: response,
+    action_type: "harvest_analyze",
+  });
 
   return NextResponse.json(response);
 }
