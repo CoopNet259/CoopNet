@@ -21,7 +21,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+# lib/   # Python virtualenv - devre dışı, Next.js src/lib klasörü ile çakışıyor
 lib64/
 parts/
 sdist/

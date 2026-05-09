@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/aslanbaris13/CoopNet#readme",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "next": "^15.5.18",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
