@@ -1,3 +1,5 @@
+import { createServerClient } from "@/lib/supabase/client";
+
 export interface LogEntry {
   input_text: string;
   output_json: unknown;
@@ -5,18 +7,20 @@ export interface LogEntry {
   created_by?: string;
 }
 
-// Supabase hazır olmadan önce: konsola yaz
-// Supabase gelince: aşağıdaki console.log satırlarını Supabase insert ile değiştir
 export async function logAI(entry: LogEntry): Promise<void> {
   const record = {
-    ...entry,
-    created_by: entry.created_by ?? "system",
+    action_type: entry.action_type,
+    input_text: entry.input_text,
+    output_data: entry.output_json,
+    status: "success",
     created_at: new Date().toISOString(),
   };
 
-  // TODO: Supabase gelince burası değişecek:
-  // const supabase = createClient();
-  // await supabase.from("ai_logs").insert(record);
+  const supabase = createServerClient();
+  const { error } = await supabase.from("ai_logs").insert(record);
 
-  console.log("[AI_LOG]", JSON.stringify(record, null, 2));
+  if (error) {
+    console.error("[AI_LOG_ERROR]", error.message);
+    console.log("[AI_LOG_FALLBACK]", JSON.stringify(record, null, 2));
+  }
 }
