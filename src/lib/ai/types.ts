@@ -1,3 +1,9 @@
+// Chat geçmişindeki tek mesaj — frontend bu formatı gönderir, backend Gemini'ye dönüştürür
+export interface ChatMessage {
+  role: "user" | "model";
+  text: string;
+}
+
 // Üretici mesajından çıkarılan yapılandırılmış veri
 export interface ParsedHarvest {
   product_name: string;

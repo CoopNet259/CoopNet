@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runAgent } from "@/lib/ai/orchestrator";
+import type { ChatMessage } from "@/lib/ai/types";
 
 // POST /api/ai/chat
-// Body: { message: string }
-// Orchestrator'ı çalıştırır, AI'ın cevabını ve hangi tool'ları çağırdığını döner.
+// Body: { message: string, history?: ChatMessage[] }
+// history: frontend'in tuttuğu son N mesaj — AI bağlamı hatırlamak için kullanır
 export async function POST(req: NextRequest) {
-  const { message } = await req.json();
+  const { message, history } = await req.json() as {
+    message: string;
+    history?: ChatMessage[];
+  };
 
   if (!message) {
     return NextResponse.json({ error: "message gerekli" }, { status: 400 });
   }
 
   try {
-    const result = await runAgent(message);
+    const result = await runAgent(message, history ?? []);
     return NextResponse.json(result);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
