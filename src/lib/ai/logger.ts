@@ -3,7 +3,7 @@ import { createServerClient } from "@/lib/supabase/client";
 export interface LogEntry {
   input_text: string;
   output_data: unknown;
-  action_type: "harvest_analyze" | "chat" | "daily_summary" | "draft_email" | "draft_notification" | "stock_check";
+  action_type: "harvest_analyze" | "chat" | "daily_summary" | "draft_email" | "draft_notification" | "stock_check" | "anomaly_check" | "weekly_insight";
   created_by?: string;
 }
 
