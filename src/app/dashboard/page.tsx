@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './dashboard.css';
+import { getDashboardSummary, type DashboardSummary, type StockItem, type OrderItem, type TaskItem } from '@/lib/api/client';
 
 /* ── Icons ── */
 const Icon = ({ d, size = 18, extra = '' }: { d: string | string[]; size?: number; extra?: string }) => (
@@ -41,58 +42,24 @@ const navItems = [
   { id: 'ai-logs',     label: 'AI Logs',          icon: 'log',       path: '/dashboard/ai-logs' },
 ];
 
-/* ── Mock data ── */
-const depoUyariler = [
-  { id: 1, urun: 'Domates', stok: '12 kg', esik: '50 kg', aciliyet: 'kritik', emoji: '🍅' },
-  { id: 2, urun: 'Biber',   stok: '28 kg', esik: '60 kg', aciliyet: 'yuksek', emoji: '🫑' },
-  { id: 3, urun: 'Patlıcan',stok: '35 kg', esik: '40 kg', aciliyet: 'orta',   emoji: '🍆' },
-];
-
-const bugunTalepler = [
-  { id: 1, musteri: 'Migros Market',      urun: 'Domates',  miktar: '200 kg', saat: '09:00', durum: 'bekliyor' },
-  { id: 2, musteri: 'Tarım Kooperatifi',  urun: 'Biber',    miktar: '80 kg',  saat: '11:30', durum: 'onaylandi' },
-  { id: 3, musteri: 'Organik Pazar',      urun: 'Patlıcan', miktar: '60 kg',  saat: '14:00', durum: 'bekliyor' },
-];
-
-const ureticiler = [
-  { id: 1, ad: 'Fatma Kaya',    urun: 'Domates',  miktar: '150 kg', mesafe: '8 km',  puan: 4.9, emoji: '🍅' },
-  { id: 2, ad: 'Ayşe Demir',   urun: 'Biber',    miktar: '90 kg',  mesafe: '12 km', puan: 4.7, emoji: '🫑' },
-  { id: 3, ad: 'Hatice Yıldız', urun: 'Patlıcan', miktar: '70 kg',  mesafe: '5 km',  puan: 4.8, emoji: '🍆' },
-];
-
-const dunOzeti = [
-  { label: 'Toplam Sipariş',   value: '14',      icon: '📦', renk: 'green' },
-  { label: 'Teslim Edilen',    value: '11',      icon: '✅', renk: 'green' },
-  { label: 'Bekleyen',         value: '3',       icon: '⏳', renk: 'gold'  },
-  { label: 'Toplam Gelir',     value: '₺24.600', icon: '💰', renk: 'green' },
-  { label: 'Yeni Üretici',     value: '2',       icon: '👤', renk: 'blue'  },
-  { label: 'Anomali Tespiti',  value: '1',       icon: '⚠️', renk: 'red'   },
-];
-
-const bugunIsler = [
-  { id: 1, is: 'Migros siparişi için domates temini',     durum: false, oncelik: 'yuksek' },
-  { id: 2, is: 'Depo stok sayımı yapılacak',              durum: false, oncelik: 'orta'   },
-  { id: 3, is: 'Ayşe Demir ile fiyat görüşmesi',          durum: true,  oncelik: 'orta'   },
-  { id: 4, is: 'Q2 finansal raporu tamamlanacak',         durum: false, oncelik: 'yuksek' },
-  { id: 5, is: 'Organik Pazar sözleşmesi imzalanacak',    durum: false, oncelik: 'dusuk'  },
-];
-
-const aiLogs = [
-  { zaman: '09:14', tip: 'Anomali', mesaj: 'Domates stoku kritik seviyenin altına düştü. Acil sipariş önerisi gönderildi.', renk: 'red' },
-  { zaman: '08:55', tip: 'Tahmin',  mesaj: 'Bu hafta biber talebi %18 artış bekleniyor. Üreticilere bildirim yapıldı.',       renk: 'gold' },
-  { zaman: '08:30', tip: 'Rapor',   mesaj: 'Dün gerçekleşen 14 sipariş için günlük özet raporu oluşturuldu.',                renk: 'green' },
-  { zaman: '07:45', tip: 'Otomasyon',mesaj: 'Organik Pazar talebine otomatik yanıt taslağı hazırlandı.',                    renk: 'blue' },
-];
-
-const aiOzet = {
-  baslik: 'AI Günlük Analiz Özeti — 10 Mayıs 2026',
-  maddeler: [
-    'Depoda 3 ürün kritik stok seviyesinin altında. Öncelikli sipariş gerekiyor.',
-    'Bugünkü 3 talep toplamda ₺8.200 değerinde. Tamamı zamanında karşılanabilir.',
-    'Fatma Kaya bu ay en yüksek performanslı üretici olarak öne çıkıyor.',
-    'Pazar eğilimi: Domates fiyatları bu haftadan itibaren %7 artış gösterebilir.',
-  ],
+/* ── Emoji yardımcısı ── */
+const URUN_EMOJI: Record<string, string> = {
+  domates: '🍅', biber: '🫑', patlıcan: '🍆', salatalık: '🥒',
+  kayısı: '🍑', incir: '🟣', havuç: '🥕', soğan: '🧅', mısır: '🌽', üzüm: '🍇',
 };
+function emojiFor(name: string) {
+  const key = name.toLowerCase();
+  for (const [k, v] of Object.entries(URUN_EMOJI)) {
+    if (key.includes(k)) return v;
+  }
+  return '📦';
+}
+
+function tierToAciliyet(tier: string) {
+  if (tier === 'urgent') return 'kritik';
+  if (tier === 'warn') return 'yuksek';
+  return 'orta';
+}
 
 /* ═══════════════════════════════════════════════════ */
 
@@ -100,11 +67,20 @@ export default function DashboardPage() {
   const router = useRouter();
   const [activeNav, setActiveNav] = useState('dashboard');
   const [showNotif, setShowNotif] = useState(false);
-  const [isler, setIsler] = useState(bugunIsler);
   const [barsReady, setBarsReady] = useState(false);
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const t = setTimeout(() => setBarsReady(true), 150);
+    getDashboardSummary()
+      .then(data => {
+        setSummary(data);
+        setTasks(data.tasks.map(t => ({ ...t })));
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
     return () => clearTimeout(t);
   }, []);
 
@@ -113,9 +89,41 @@ export default function DashboardPage() {
     router.push(item.path);
   };
 
-  const toggleIs = (id: number) => {
-    setIsler(prev => prev.map(i => i.id === id ? { ...i, durum: !i.durum } : i));
+  const toggleTask = (id: string) => {
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
   };
+
+  // Türetilmiş veriler
+  const depoUyariler = (summary?.stock ?? [])
+    .filter(s => s.is_critical)
+    .slice(0, 3)
+    .map(s => ({
+      id: s.id, urun: s.name, emoji: emojiFor(s.name),
+      stok: `${s.current} ${s.unit}`, esik: `${Math.round(s.capacity / 4)} ${s.unit}`,
+      aciliyet: tierToAciliyet(s.tier),
+    }));
+
+  const bugunTalepler = (summary?.orders ?? []).slice(0, 3).map(o => ({
+    id: o.id, musteri: o.customer, urun: o.product,
+    miktar: `${o.quantity} ${o.unit}`,
+    saat: '—',
+    durum: o.status === 'delivered' ? 'onaylandi' : 'bekliyor',
+  }));
+
+  const dunOzeti = summary ? [
+    { label: 'Açık Siparişler',  value: String(summary.kpis.open_orders),    icon: '📦', renk: 'green' },
+    { label: 'Kritik Stok',      value: String(summary.kpis.critical_stock),  icon: '⚠️', renk: 'red'   },
+    { label: 'Açık Görevler',    value: String(summary.kpis.open_tasks),      icon: '✅', renk: 'gold'  },
+    { label: 'Hasat (haftalık)', value: `${summary.kpis.harvest_kg_week} kg`, icon: '🌾', renk: 'green' },
+    { label: 'Talep Trendi',     value: `${summary.kpis.order_trend_pct > 0 ? '+' : ''}${summary.kpis.order_trend_pct}%`, icon: '📈', renk: summary.kpis.order_trend_pct >= 0 ? 'green' : 'red' },
+    { label: 'Tarih',            value: summary.date, icon: '📅', renk: 'blue' },
+  ] : [];
+
+  const ureticiler = [
+    { id: 1, ad: 'Fatma Kaya',     urun: 'Domates',  miktar: '150 kg', mesafe: '8 km',  puan: 4.9, emoji: '🍅' },
+    { id: 2, ad: 'Ayşe Demir',    urun: 'Biber',    miktar: '90 kg',  mesafe: '12 km', puan: 4.7, emoji: '🫑' },
+    { id: 3, ad: 'Hatice Yıldız', urun: 'Patlıcan', miktar: '70 kg',  mesafe: '5 km',  puan: 4.8, emoji: '🍆' },
+  ];
 
   return (
     <div className="coopnet-root">
@@ -343,23 +351,27 @@ export default function DashboardPage() {
 
           </div>
 
-          {/* ── Dünün Özeti ── */}
+          {/* ── Güncel Özet ── */}
           <section className="section-block" id="dun-ozeti">
             <div className="section-block-header">
               <span className="section-block-icon">📊</span>
-              <h3>Dünün Özeti</h3>
-              <span className="section-block-date">9 Mayıs 2026</span>
+              <h3>Güncel Durum</h3>
+              <span className="section-block-date">{summary?.date ?? '—'}</span>
             </div>
-            <div className="ozet-grid">
-              {dunOzeti.map((o, i) => (
-                <div key={i} className={`ozet-card ozet-${o.renk}`}>
-                  <span className="ozet-icon">{o.icon}</span>
-                  <div className="ozet-value">{o.value}</div>
-                  <div className="ozet-label">{o.label}</div>
-                  <div className={`ozet-bar-fill ${o.renk}`} style={{ width: barsReady ? '100%' : '0%' }} />
-                </div>
-              ))}
-            </div>
+            {loading ? (
+              <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Veriler yükleniyor…</div>
+            ) : (
+              <div className="ozet-grid">
+                {dunOzeti.map((o, i) => (
+                  <div key={i} className={`ozet-card ozet-${o.renk}`}>
+                    <span className="ozet-icon">{o.icon}</span>
+                    <div className="ozet-value">{o.value}</div>
+                    <div className="ozet-label">{o.label}</div>
+                    <div className={`ozet-bar-fill ${o.renk}`} style={{ width: barsReady ? '100%' : '0%' }} />
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           {/* ── Bugün Yapılacaklar ── */}
@@ -368,23 +380,26 @@ export default function DashboardPage() {
               <span className="section-block-icon">✅</span>
               <h3>Bugün Yapılması Gerekenler</h3>
               <span className="section-block-date">
-                {isler.filter(i => i.durum).length}/{isler.length} tamamlandı
+                {tasks.filter(t => t.done).length}/{tasks.length} tamamlandı
               </span>
             </div>
             <div className="is-listesi">
-              {isler.map(is => (
+              {tasks.length === 0 && !loading && (
+                <div style={{ padding: '16px', color: 'var(--text-muted)' }}>Bugün için görev yok.</div>
+              )}
+              {tasks.map(t => (
                 <div
-                  key={is.id}
-                  className={`is-item${is.durum ? ' done' : ''}`}
-                  onClick={() => toggleIs(is.id)}
-                  id={`is-${is.id}`}
+                  key={t.id}
+                  className={`is-item${t.done ? ' done' : ''}`}
+                  onClick={() => toggleTask(t.id)}
+                  id={`is-${t.id}`}
                 >
-                  <div className={`is-check${is.durum ? ' checked' : ''}`}>
-                    {is.durum && <Icon d={icons.check} size={12} />}
+                  <div className={`is-check${t.done ? ' checked' : ''}`}>
+                    {t.done && <Icon d={icons.check} size={12} />}
                   </div>
-                  <span className="is-text">{is.is}</span>
-                  <span className={`oncelik-pill ${is.oncelik}`}>
-                    {is.oncelik === 'yuksek' ? '🔴 Yüksek' : is.oncelik === 'orta' ? '🟡 Orta' : '🟢 Düşük'}
+                  <span className="is-text">{t.title}</span>
+                  <span className={`oncelik-pill ${t.priority === 'high' ? 'yuksek' : t.priority === 'medium' ? 'orta' : 'dusuk'}`}>
+                    {t.priority === 'high' ? '🔴 Yüksek' : t.priority === 'medium' ? '🟡 Orta' : '🟢 Düşük'}
                   </span>
                 </div>
               ))}
@@ -444,6 +459,33 @@ export default function DashboardPage() {
             </div>
           </section>
 
+          {/* ── Talep Trendi ── */}
+          {summary && (summary.trends.up.length > 0 || summary.trends.down.length > 0) && (
+            <section className="section-block" id="trend-section">
+              <div className="section-block-header">
+                <span className="section-block-icon">📈</span>
+                <h3>Talep Trendi</h3>
+                <span className="section-block-date">Bu hafta vs geçen hafta</span>
+              </div>
+              <div className="ai-log-list">
+                {summary.trends.up.map((t, i) => (
+                  <div key={i} className="ai-log-item log-green">
+                    <div className="log-tip log-tip-green">↑ Artan</div>
+                    <div className="log-mesaj">{t.name}</div>
+                    <div className="log-zaman">{t.delta}</div>
+                  </div>
+                ))}
+                {summary.trends.down.map((t, i) => (
+                  <div key={i} className="ai-log-item log-red">
+                    <div className="log-tip log-tip-red">↓ Azalan</div>
+                    <div className="log-mesaj">{t.name}</div>
+                    <div className="log-zaman">{t.delta}</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* ── AI Logs ── */}
           <section className="section-block" id="ai-logs-section">
             <div className="section-block-header">
@@ -454,13 +496,11 @@ export default function DashboardPage() {
               </button>
             </div>
             <div className="ai-log-list">
-              {aiLogs.map((log, i) => (
-                <div key={i} className={`ai-log-item log-${log.renk}`}>
-                  <div className={`log-tip log-tip-${log.renk}`}>{log.tip}</div>
-                  <div className="log-mesaj">{log.mesaj}</div>
-                  <div className="log-zaman">{log.zaman}</div>
-                </div>
-              ))}
+              <div className="ai-log-item log-blue">
+                <div className="log-tip log-tip-blue">Rapor</div>
+                <div className="log-mesaj">Detaylı AI logları için AI Logs sayfasını ziyaret edin.</div>
+                <div className="log-zaman">→</div>
+              </div>
             </div>
           </section>
 
@@ -476,15 +516,29 @@ export default function DashboardPage() {
             <div className="ai-ozet-card">
               <div className="ai-ozet-baslik">
                 <span className="ai-chip">AI · Gemini</span>
-                <span className="ai-ozet-title">{aiOzet.baslik}</span>
+                <span className="ai-ozet-title">Günlük AI Analizi — {summary?.date ?? '—'}</span>
               </div>
               <ul className="ai-ozet-list">
-                {aiOzet.maddeler.map((m, i) => (
-                  <li key={i}>
-                    <span className="ai-bullet">›</span>
-                    {m}
+                {summary && summary.kpis.critical_stock > 0 && (
+                  <li><span className="ai-bullet">›</span>
+                    Depoda {summary.kpis.critical_stock} ürün kritik stok seviyesinin altında. Öncelikli sipariş gerekiyor.
                   </li>
-                ))}
+                )}
+                {summary && (
+                  <li><span className="ai-bullet">›</span>
+                    Bugün {summary.kpis.open_orders} açık sipariş var. Talep trendi geçen haftaya göre {summary.kpis.order_trend_pct >= 0 ? '+' : ''}{summary.kpis.order_trend_pct}%.
+                  </li>
+                )}
+                {summary && summary.kpis.open_tasks > 0 && (
+                  <li><span className="ai-bullet">›</span>
+                    {summary.kpis.open_tasks} görev bekliyor. Depo ve operasyon ekibi bilgilendirilmeli.
+                  </li>
+                )}
+                {summary && summary.kpis.harvest_kg_week > 0 && (
+                  <li><span className="ai-bullet">›</span>
+                    Bu hafta {summary.kpis.harvest_kg_week} kg hasat bildirimi yapıldı. Stok güncellemeleri takip edilmeli.
+                  </li>
+                )}
               </ul>
             </div>
           </section>

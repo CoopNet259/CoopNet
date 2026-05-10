@@ -1,7 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './depo.css';
+import { getDashboardSummary, type StockItem } from '@/lib/api/client';
 
 const Icon = ({ d, size = 18 }: { d: string | string[]; size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -41,24 +42,17 @@ const navItems = [
 
 type UrgencyLevel = 'kritik' | 'dusuk' | 'normal' | 'iyi';
 
-interface StokUrun {
-  id: number; emoji: string; ad: string;
-  mevcutKg: number; kapasiteKg: number;
-  kategori: string; sonGuncelleme: string;
+const URUN_EMOJI: Record<string, string> = {
+  domates: '🍅', biber: '🫑', patlıcan: '🍆', salatalık: '🥒',
+  kayısı: '🍑', incir: '🟣', havuç: '🥕', soğan: '🧅', mısır: '🌽', üzüm: '🍇',
+};
+function emojiFor(name: string) {
+  const key = name.toLowerCase();
+  for (const [k, v] of Object.entries(URUN_EMOJI)) {
+    if (key.includes(k)) return v;
+  }
+  return '📦';
 }
-
-const stokVerisi: StokUrun[] = [
-  { id:1,  emoji:'🍅', ad:'Domates',   mevcutKg:80,   kapasiteKg:500, kategori:'Sebze',   sonGuncelleme:'Bugün 08:30' },
-  { id:2,  emoji:'🫑', ad:'Biber',     mevcutKg:55,   kapasiteKg:300, kategori:'Sebze',   sonGuncelleme:'Bugün 09:00' },
-  { id:3,  emoji:'🍑', ad:'Kayısı',    mevcutKg:18,   kapasiteKg:200, kategori:'Meyve',   sonGuncelleme:'Dün 17:00'   },
-  { id:4,  emoji:'🟣', ad:'İncir',     mevcutKg:12,   kapasiteKg:150, kategori:'Meyve',   sonGuncelleme:'Dün 16:00'   },
-  { id:5,  emoji:'🥒', ad:'Salatalık', mevcutKg:210,  kapasiteKg:400, kategori:'Sebze',   sonGuncelleme:'Bugün 07:45' },
-  { id:6,  emoji:'🍆', ad:'Patlıcan',  mevcutKg:95,   kapasiteKg:250, kategori:'Sebze',   sonGuncelleme:'Bugün 09:15' },
-  { id:7,  emoji:'🧅', ad:'Soğan',     mevcutKg:320,  kapasiteKg:600, kategori:'Sebze',   sonGuncelleme:'Dün 18:00'   },
-  { id:8,  emoji:'🥕', ad:'Havuç',     mevcutKg:45,   kapasiteKg:300, kategori:'Sebze',   sonGuncelleme:'Bugün 08:00' },
-  { id:9,  emoji:'🍇', ad:'Üzüm',      mevcutKg:22,   kapasiteKg:200, kategori:'Meyve',   sonGuncelleme:'Dün 15:00'   },
-  { id:10, emoji:'🌽', ad:'Mısır',     mevcutKg:160,  kapasiteKg:350, kategori:'Tahıl',   sonGuncelleme:'Bugün 08:50' },
-];
 
 interface Calisan {
   id: number; ad: string; rol: string;
@@ -86,16 +80,10 @@ const trendUyarilari: TrendUyari[] = [
   { emoji:'🥕', urun:'Havuç',     artis:'+12%', neden:'Okul kantinleri için toplu sipariş bekleniyor',  oneri:'Stok gözlemini artır',        seviye:'orta'   },
 ];
 
-function getUrgency(mevcut: number, kapasite: number): UrgencyLevel {
-  const pct = (mevcut / kapasite) * 100;
-  if (pct <= 25) return 'kritik';
-  if (pct <= 40) return 'dusuk';
-  if (pct <= 65) return 'normal';
+function tierToUrgency(tier: string): UrgencyLevel {
+  if (tier === 'urgent') return 'kritik';
+  if (tier === 'warn') return 'dusuk';
   return 'iyi';
-}
-
-function getPct(mevcut: number, kapasite: number) {
-  return Math.round((mevcut / kapasite) * 100);
 }
 
 export default function DepoPage() {
@@ -103,6 +91,15 @@ export default function DepoPage() {
   const [activeNav, setActiveNav] = useState('depo');
   const [showNotif, setShowNotif] = useState(false);
   const [filtre, setFiltre] = useState<'hepsi'|'kritik'|'normal'>('hepsi');
+  const [stokVerisi, setStokVerisi] = useState<StockItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getDashboardSummary()
+      .then(data => setStokVerisi(data.stock))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
 
   const navClick = (item: typeof navItems[0]) => {
     setActiveNav(item.id);
@@ -111,13 +108,13 @@ export default function DepoPage() {
 
   const sortedStok = [...stokVerisi]
     .filter(u => {
-      if (filtre === 'kritik') return getUrgency(u.mevcutKg, u.kapasiteKg) === 'kritik';
-      if (filtre === 'normal') return getUrgency(u.mevcutKg, u.kapasiteKg) !== 'kritik';
+      if (filtre === 'kritik') return u.is_critical;
+      if (filtre === 'normal') return !u.is_critical;
       return true;
     })
-    .sort((a, b) => getPct(a.mevcutKg, a.kapasiteKg) - getPct(b.mevcutKg, b.kapasiteKg));
+    .sort((a, b) => a.pct - b.pct);
 
-  const kritikSayisi = stokVerisi.filter(u => getUrgency(u.mevcutKg, u.kapasiteKg) === 'kritik').length;
+  const kritikSayisi = stokVerisi.filter(u => u.is_critical).length;
   const musaitSayisi = calisanlar.filter(c => c.musait).length;
 
   return (
@@ -227,7 +224,7 @@ export default function DepoPage() {
           <div className="depo-kpi-bar">
             <div className="depo-kpi-item red">
               <span className="depo-kpi-icon">🔴</span>
-              <div><strong>{kritikSayisi}</strong><p>Kritik Stok</p></div>
+              <div><strong>{loading ? '—' : kritikSayisi}</strong><p>Kritik Stok</p></div>
             </div>
             <div className="depo-kpi-item green">
               <span className="depo-kpi-icon">👷</span>
@@ -239,7 +236,7 @@ export default function DepoPage() {
             </div>
             <div className="depo-kpi-item blue">
               <span className="depo-kpi-icon">📦</span>
-              <div><strong>{stokVerisi.length}</strong><p>Toplam Ürün</p></div>
+              <div><strong>{loading ? '—' : stokVerisi.length}</strong><p>Toplam Ürün</p></div>
             </div>
           </div>
 
@@ -291,45 +288,50 @@ export default function DepoPage() {
                 </div>
               </div>
 
-              {sortedStok.filter(u => getUrgency(u.mevcutKg, u.kapasiteKg) === 'kritik').length > 0 && filtre !== 'normal' && (
+              {sortedStok.filter(u => u.is_critical).length > 0 && filtre !== 'normal' && (
                 <div className="kritik-uyari-banner">
                   <Icon d={icons.alert} size={15} />
                   <strong>Acil Sipariş Gerekiyor</strong>
-                  <span>— {sortedStok.filter(u=>getUrgency(u.mevcutKg,u.kapasiteKg)==='kritik').length} ürün kritik seviyede</span>
+                  <span>— {sortedStok.filter(u => u.is_critical).length} ürün kritik seviyede</span>
+                </div>
+              )}
+
+              {loading && (
+                <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  Stok verileri yükleniyor…
                 </div>
               )}
 
               <div className="stok-grid">
                 {sortedStok.map(urun => {
-                  const pct = getPct(urun.mevcutKg, urun.kapasiteKg);
-                  const urgency = getUrgency(urun.mevcutKg, urun.kapasiteKg);
+                  const urgency = tierToUrgency(urun.tier);
                   return (
                     <div key={urun.id} className={`stok-card urgency-${urgency}`} id={`stok-${urun.id}`}>
-                      {urgency === 'kritik' && <div className="stok-kritik-flag">⚠️ ACİL</div>}
+                      {urun.is_critical && <div className="stok-kritik-flag">⚠️ ACİL</div>}
                       <div className="stok-card-top">
-                        <span className="stok-emoji">{urun.emoji}</span>
+                        <span className="stok-emoji">{emojiFor(urun.name)}</span>
                         <div className="stok-meta">
-                          <strong>{urun.ad}</strong>
-                          <span className="stok-kategori">{urun.kategori}</span>
+                          <strong>{urun.name}</strong>
+                          <span className="stok-kategori">{urun.unit}</span>
                         </div>
                         <span className={`urgency-badge ${urgency}`}>
-                          {urgency==='kritik'?'Kritik':urgency==='dusuk'?'Düşük':urgency==='normal'?'Normal':'İyi'}
+                          {urgency==='kritik'?'Kritik':urgency==='dusuk'?'Düşük':'İyi'}
                         </span>
                       </div>
                       <div className="stok-values">
-                        <span className="stok-mevcut">{urun.mevcutKg} kg</span>
-                        <span className="stok-kapasite">/ {urun.kapasiteKg} kg</span>
-                        <span className="stok-pct" style={{color: pct<=25?'var(--red-500)':pct<=40?'var(--gold-500)':'var(--green-500)'}}>
-                          %{pct}
+                        <span className="stok-mevcut">{urun.current} {urun.unit}</span>
+                        <span className="stok-kapasite">/ {urun.capacity} {urun.unit}</span>
+                        <span className="stok-pct" style={{color: urun.pct<=25?'var(--red-500)':urun.pct<=40?'var(--gold-500)':'var(--green-500)'}}>
+                          %{urun.pct}
                         </span>
                       </div>
                       <div className="stok-bar-track">
-                        <div className={`stok-bar-fill ${urgency}`} style={{ width: `${pct}%` }} />
+                        <div className={`stok-bar-fill ${urgency}`} style={{ width: `${urun.pct}%` }} />
                       </div>
                       <div className="stok-footer">
-                        <span>🕐 {urun.sonGuncelleme}</span>
-                        {urgency==='kritik' && (
-                          <button className="siparis-btn" onClick={()=>alert(`${urun.ad} için sipariş formu açılıyor…`)}>
+                        <span>📦 Gerçek zamanlı</span>
+                        {urun.is_critical && (
+                          <button className="siparis-btn" onClick={()=>alert(`${urun.name} için sipariş formu açılıyor…`)}>
                             Sipariş Ver →
                           </button>
                         )}
