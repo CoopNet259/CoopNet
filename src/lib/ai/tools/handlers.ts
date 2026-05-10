@@ -119,6 +119,24 @@ export async function assign_task({
     .single();
 
   if (error) return { error: error.message };
+
+  // Görev oluşturulunca atanan role otomatik bildirim gönder
+  // AI'ın ayrıca send_notification çağırmasına gerek kalmaz
+  const priorityLabel: Record<string, string> = {
+    high: "🔴 Yüksek öncelikli",
+    medium: "🟡 Orta öncelikli",
+    low: "🟢 Düşük öncelikli",
+  };
+
+  await supabase.from("notifications").insert({
+    role,
+    title: `Yeni görev: ${title}`,
+    message: `${priorityLabel[priority] ?? priority} görev atandı. ${description ? `Not: ${description}` : ""}`.trim(),
+    type: priority === "high" ? "warning" : "info",
+    is_read: false,
+    created_at: new Date().toISOString(),
+  });
+
   return { task_id: data.id, message: `Görev oluşturuldu: "${title}" → ${role}` };
 }
 
