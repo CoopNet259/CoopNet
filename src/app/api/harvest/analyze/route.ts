@@ -108,6 +108,7 @@ getirme zamanı: ${parsed.available_time ?? "belirtilmemiş"}.
       actions: suggestedActions,
       executed_actions: executedActions,
       auto_executed: autoExecuted,
+      ...resolveConfidence(parsed.confidence),
     };
 
     await logAI({
@@ -141,6 +142,26 @@ function extractStockStatus(toolCalls: Array<{ tool: string; result: unknown }>)
     unit: threshold.unit as string,
     is_critical: threshold.is_critical as boolean,
     fill_percentage: threshold.fill_percentage as number,
+  };
+}
+
+// Confidence skorunu insan okunabilir etikete ve uyarıya dönüştür
+function resolveConfidence(confidence: number): {
+  confidence_label: "Yüksek" | "Orta" | "Düşük";
+  confidence_warning: string | null;
+} {
+  if (confidence >= 0.85) {
+    return { confidence_label: "Yüksek", confidence_warning: null };
+  }
+  if (confidence >= 0.7) {
+    return {
+      confidence_label: "Orta",
+      confidence_warning: "Mesaj kısmen belirsiz. Aksiyonlar alındı ancak üreticiyle teyit edilmesi önerilir.",
+    };
+  }
+  return {
+    confidence_label: "Düşük",
+    confidence_warning: "Mesaj çok belirsiz, otomatik aksiyon alınmadı. Üreticiden net bilgi isteyin.",
   };
 }
 

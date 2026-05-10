@@ -22,8 +22,10 @@ export interface HarvestAnalysisResult {
     is_critical: boolean;
     fill_percentage: number;
   };
-  recommendation: string; // AI'ın Türkçe önerisi
-  actions: string[];      // Önerilen aksiyonlar (metin)
+  recommendation: string;     // AI'ın Türkçe önerisi
+  actions: string[];          // Önerilen aksiyonlar (metin)
   executed_actions: string[]; // Otomatik olarak gerçekleştirilen aksiyonlar
   auto_executed: boolean;     // confidence >= 0.7 ise true — aksiyon alındı
+  confidence_label: "Yüksek" | "Orta" | "Düşük"; // Frontend'e gösterilecek etiket
+  confidence_warning: string | null; // Düşük confidence'da uyarı, yoksa null
 }
