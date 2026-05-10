@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./dashboard/shared-modern.css";
 
 export const metadata: Metadata = {
   title: "CoopFlow AI",
