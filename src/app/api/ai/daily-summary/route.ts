@@ -30,6 +30,25 @@ Siparişler:
 - Bekliyor: ${context.orders.pending}
 - Gecikmiş: ${context.orders.delayed}
 
+Anomali tespiti:
+- Talep anomalileri (${context.anomalies.demand_anomalies.length}):
+${context.anomalies.demand_anomalies.map((a) =>
+  `  - ${a.product_name}: geçen hafta ${a.previous_week_orders}, bu hafta ${a.current_week_orders} (değişim ${(a.change_ratio * 100).toFixed(1)}%)`
+).join("\n")}
+- Gecikmiş sipariş patlaması:
+  - Bugün oran: ${(context.anomalies.delayed_spike.delayed_ratio_today * 100).toFixed(1)}%
+  - Son 7 gün ort.: ${(context.anomalies.delayed_spike.delayed_ratio_7d_average * 100).toFixed(1)}%
+  - Katsayı: ${Number.isFinite(context.anomalies.delayed_spike.multiplier) ? context.anomalies.delayed_spike.multiplier.toFixed(2) : "sonsuz"}
+  - Anomali: ${context.anomalies.delayed_spike.is_anomaly ? "evet" : "hayır"}
+- Stok erime anomalileri (${context.anomalies.stock_depletion_anomalies.length}):
+${context.anomalies.stock_depletion_anomalies.map((a) =>
+  `  - ${a.product_name}: önceki 7 gün ${a.previous_7d_consumption}, son 7 gün ${a.recent_7d_consumption} (hız ${a.acceleration_ratio.toFixed(2)}x)`
+).join("\n")}
+- Sessiz üreticiler (${context.anomalies.producer_silence.length}):
+${context.anomalies.producer_silence.map((p) =>
+  `  - ${p.producer}: ${p.silent_days} gündür bildirim yok`
+).join("\n")}
+
 Stok durumu:
 ${context.inventory.map(i =>
   `- ${i.name}: ${i.quantity} ${i.unit}${i.is_critical ? " ⚠️ KRİTİK" : ""}`
@@ -68,6 +87,7 @@ Türkçe yaz. Her madde kısa ve eyleme dönüştürülebilir olsun.`,
     summary,
     stats: context.orders,
     critical_items: criticalItems,
+    anomalies: context.anomalies,
   };
 
   await logAI({
