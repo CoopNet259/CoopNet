@@ -29,3 +29,42 @@ export interface HarvestAnalysisResult {
   confidence_label: "Yüksek" | "Orta" | "Düşük"; // Frontend'e gösterilecek etiket
   confidence_warning: string | null; // Düşük confidence'da uyarı, yoksa null
 }
+
+export interface DemandAnomaly {
+  product_name: string;
+  previous_week_orders: number;
+  current_week_orders: number;
+  change_ratio: number;
+  is_anomaly: boolean;
+}
+
+export interface DelayedSpike {
+  date: string;
+  delayed_ratio_today: number;
+  delayed_ratio_7d_average: number;
+  multiplier: number;
+  is_anomaly: boolean;
+}
+
+export interface StockDepletionAnomaly {
+  product_name: string;
+  previous_7d_consumption: number;
+  recent_7d_consumption: number;
+  acceleration_ratio: number;
+  is_anomaly: boolean;
+}
+
+export interface ProducerSilence {
+  producer: string;
+  last_report_at: string;
+  silent_days: number;
+  is_anomaly: boolean;
+}
+
+export interface DailyAnomalyInsights {
+  date: string;
+  demand_anomalies: DemandAnomaly[];
+  delayed_spike: DelayedSpike;
+  stock_depletion_anomalies: StockDepletionAnomaly[];
+  producer_silence: ProducerSilence[];
+}

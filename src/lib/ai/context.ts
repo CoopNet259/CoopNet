@@ -1,4 +1,6 @@
 import { createServerClient } from "@/lib/supabase/client";
+import { computeDailyAnomalyInsights } from "@/lib/ai/anomaly";
+import type { DailyAnomalyInsights } from "@/lib/ai/types";
 
 export interface DailyContext {
   date: string;
@@ -6,6 +8,7 @@ export interface DailyContext {
   inventory: Array<{ name: string; quantity: number; unit: string; is_critical: boolean }>;
   tasks: { total: number; done: number; todo: number };
   harvests: Array<{ producer: string; product: string; quantity: number; unit: string; status: string }>;
+  anomalies: DailyAnomalyInsights;
 }
 
 export async function buildDailyContext(date: string): Promise<DailyContext> {
@@ -13,7 +16,7 @@ export async function buildDailyContext(date: string): Promise<DailyContext> {
   const start = `${date}T00:00:00`;
   const end   = `${date}T23:59:59`;
 
-  const [ordersRes, inventoryRes, tasksRes, harvestsRes] = await Promise.all([
+  const [ordersRes, inventoryRes, tasksRes, harvestsRes, anomalies] = await Promise.all([
     supabase.from("orders").select("status").gte("created_at", start).lte("created_at", end),
     supabase.from("inventory").select("current_quantity, unit, products(name, critical_stock_level)"),
     supabase.from("tasks").select("status").gte("created_at", start).lte("created_at", end),
@@ -22,6 +25,7 @@ export async function buildDailyContext(date: string): Promise<DailyContext> {
       .select("quantity, unit, status, profiles(full_name), products(name)")
       .gte("created_at", start)
       .lte("created_at", end),
+    computeDailyAnomalyInsights(date),
   ]);
 
   const orders = ordersRes.data ?? [];
@@ -58,5 +62,6 @@ export async function buildDailyContext(date: string): Promise<DailyContext> {
       unit:     h.unit,
       status:   h.status,
     })),
+    anomalies,
   };
 }
