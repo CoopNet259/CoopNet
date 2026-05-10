@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import './dashboard.css';
 
 /* ── Icons ── */
-const Icon = ({ d, size = 18 }: { d: string | string[]; size?: number }) => (
+const Icon = ({ d, size = 18, extra = '' }: { d: string | string[]; size?: number; extra?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={extra}>
     {Array.isArray(d) ? d.map((p, i) => <path key={i} d={p} />) : <path d={d} />}
   </svg>
 );
@@ -388,6 +388,59 @@ export default function DashboardPage() {
                   </span>
                 </div>
               ))}
+            </div>
+          </section>
+
+          {/* ── STK İsraf Önleme ve Kardeş Üretici Eşleşmeleri ── */}
+          <section className="stk-widget" id="stk-ozet" onClick={() => router.push('/dashboard/talepler')} style={{ cursor: 'pointer' }}>
+            <div className="stk-widget-header">
+              <div className="stk-widget-title">
+                <span style={{ fontSize: 20 }}>♻️</span>
+                <div>
+                  <h3>İsraf Önleme & Kardeş Üretici Eşleşmeleri</h3>
+                  <p>STK riski taşıyan ürünler ve yönlendirilebilecek üreticiler</p>
+                </div>
+              </div>
+              <Icon d={icons.chevron} size={20} extra="text-grey-400" />
+            </div>
+            <div className="stk-widget-content">
+              {/* Domates */}
+              <div className="stk-widget-item">
+                <div className="stk-widget-urun">
+                  <span className="stk-widget-urun-emoji">🍅</span>
+                  <div className="stk-widget-urun-info">
+                    <strong>Domates (120 kg)</strong>
+                    <span>⚠️ 3 Gün Kaldı</span>
+                  </div>
+                </div>
+                <div className="stk-widget-kardes">
+                  <div className="stk-widget-kardes-avatar">BS</div>
+                  <div className="stk-widget-kardes-info">
+                    <strong>Bereket Salça Atölyesi</strong>
+                    <span>Salça Üretimi İçin Uygun</span>
+                  </div>
+                  <button className="stk-widget-action" onClick={(e) => { e.stopPropagation(); alert('Bereket Salça Atölyesine mesaj gönderiliyor...'); }}>İletişime Geç</button>
+                </div>
+              </div>
+
+              {/* İncir */}
+              <div className="stk-widget-item">
+                <div className="stk-widget-urun">
+                  <span className="stk-widget-urun-emoji">🟣</span>
+                  <div className="stk-widget-urun-info">
+                    <strong>İncir (45 kg)</strong>
+                    <span>⚠️ 2 Gün Kaldı</span>
+                  </div>
+                </div>
+                <div className="stk-widget-kardes">
+                  <div className="stk-widget-kardes-avatar">TŞ</div>
+                  <div className="stk-widget-kardes-info">
+                    <strong>Tatlıcı Şirin Kooperatifi</strong>
+                    <span>Reçel Üretimi İçin Uygun</span>
+                  </div>
+                  <button className="stk-widget-action" onClick={(e) => { e.stopPropagation(); alert('Tatlıcı Şirin Kooperatifine mesaj gönderiliyor...'); }}>İletişime Geç</button>
+                </div>
+              </div>
             </div>
           </section>
 
