@@ -243,76 +243,11 @@ export default function DepoPage() {
             </div>
           </div>
 
+          {/* 3-panel layout */}
           <div className="depo-layout">
-            <div className="depo-main-col">
-              {/* ANA PANEL — Stok kartları */}
-              <div className="depo-panel">
-                <div className="panel-header">
-                  <Icon d={icons.package} size={16} />
-                  <h3>Stok Durumu</h3>
-                  <div className="filtre-tabs">
-                    {(['hepsi','kritik','normal'] as const).map(f => (
-                      <button key={f} className={`filtre-btn${filtre===f?' active':''}`}
-                        onClick={()=>setFiltre(f)}>
-                        {f==='hepsi'?'Hepsi':f==='kritik'?'🔴 Kritik':'Normal'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
-                {sortedStok.filter(u => getUrgency(u.mevcutKg, u.kapasiteKg) === 'kritik').length > 0 && filtre !== 'normal' && (
-                  <div className="kritik-uyari-banner">
-                    <Icon d={icons.alert} size={15} />
-                    <strong>Acil Sipariş Gerekiyor</strong>
-                    <span>— {sortedStok.filter(u=>getUrgency(u.mevcutKg,u.kapasiteKg)==='kritik').length} ürün kritik seviyede</span>
-                  </div>
-                )}
-
-                <div className="stok-grid">
-                  {sortedStok.map(urun => {
-                    const pct = getPct(urun.mevcutKg, urun.kapasiteKg);
-                    const urgency = getUrgency(urun.mevcutKg, urun.kapasiteKg);
-                    return (
-                      <div key={urun.id} className={`stok-card urgency-${urgency}`} id={`stok-${urun.id}`}>
-                        {urgency === 'kritik' && <div className="stok-kritik-flag">⚠️ ACİL</div>}
-                        <div className="stok-card-top">
-                          <span className="stok-emoji">{urun.emoji}</span>
-                          <div className="stok-meta">
-                            <strong>{urun.ad}</strong>
-                            <span className="stok-kategori">{urun.kategori}</span>
-                          </div>
-                          <span className={`urgency-badge ${urgency}`}>
-                            {urgency==='kritik'?'Kritik':urgency==='dusuk'?'Düşük':urgency==='normal'?'Normal':'İyi'}
-                          </span>
-                        </div>
-                        <div className="stok-values">
-                          <span className="stok-mevcut">{urun.mevcutKg} kg</span>
-                          <span className="stok-kapasite">/ {urun.kapasiteKg} kg</span>
-                          <span className="stok-pct" style={{color: pct<=25?'var(--danger)':pct<=40?'var(--warn)':'var(--good)'}}>
-                            %{pct}
-                          </span>
-                        </div>
-                        <div className="stok-bar-track">
-                          <div className={`stok-bar-fill ${urgency}`} style={{ width: `${pct}%` }} />
-                        </div>
-                        <div className="stok-footer">
-                          <span>🕐 {urun.sonGuncelleme}</span>
-                          {urgency==='kritik' && (
-                            <button className="siparis-btn" onClick={()=>alert(`${urun.ad} için sipariş formu açılıyor…`)}>
-                              Sipariş Ver →
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            <div className="depo-side-col">
-              {/* YAN PANEL 1 — Çalışanlar */}
-              <aside className="depo-panel">
+            {/* SOL — Çalışanlar */}
+            <aside className="depo-panel depo-panel-left">
               <div className="panel-header">
                 <Icon d={icons.user} size={16} />
                 <h3>Depo Çalışanları</h3>
@@ -341,8 +276,72 @@ export default function DepoPage() {
               </div>
             </aside>
 
-              {/* YAN PANEL 2 — Trend analizi */}
-              <aside className="depo-panel">
+            {/* ORTA — Stok kartları */}
+            <div className="depo-panel depo-panel-center">
+              <div className="panel-header">
+                <Icon d={icons.package} size={16} />
+                <h3>Stok Durumu</h3>
+                <div className="filtre-tabs">
+                  {(['hepsi','kritik','normal'] as const).map(f => (
+                    <button key={f} className={`filtre-btn${filtre===f?' active':''}`}
+                      onClick={()=>setFiltre(f)}>
+                      {f==='hepsi'?'Hepsi':f==='kritik'?'🔴 Kritik':'Normal'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {sortedStok.filter(u => getUrgency(u.mevcutKg, u.kapasiteKg) === 'kritik').length > 0 && filtre !== 'normal' && (
+                <div className="kritik-uyari-banner">
+                  <Icon d={icons.alert} size={15} />
+                  <strong>Acil Sipariş Gerekiyor</strong>
+                  <span>— {sortedStok.filter(u=>getUrgency(u.mevcutKg,u.kapasiteKg)==='kritik').length} ürün kritik seviyede</span>
+                </div>
+              )}
+
+              <div className="stok-grid">
+                {sortedStok.map(urun => {
+                  const pct = getPct(urun.mevcutKg, urun.kapasiteKg);
+                  const urgency = getUrgency(urun.mevcutKg, urun.kapasiteKg);
+                  return (
+                    <div key={urun.id} className={`stok-card urgency-${urgency}`} id={`stok-${urun.id}`}>
+                      {urgency === 'kritik' && <div className="stok-kritik-flag">⚠️ ACİL</div>}
+                      <div className="stok-card-top">
+                        <span className="stok-emoji">{urun.emoji}</span>
+                        <div className="stok-meta">
+                          <strong>{urun.ad}</strong>
+                          <span className="stok-kategori">{urun.kategori}</span>
+                        </div>
+                        <span className={`urgency-badge ${urgency}`}>
+                          {urgency==='kritik'?'Kritik':urgency==='dusuk'?'Düşük':urgency==='normal'?'Normal':'İyi'}
+                        </span>
+                      </div>
+                      <div className="stok-values">
+                        <span className="stok-mevcut">{urun.mevcutKg} kg</span>
+                        <span className="stok-kapasite">/ {urun.kapasiteKg} kg</span>
+                        <span className="stok-pct" style={{color: pct<=25?'var(--red-500)':pct<=40?'var(--gold-500)':'var(--green-500)'}}>
+                          %{pct}
+                        </span>
+                      </div>
+                      <div className="stok-bar-track">
+                        <div className={`stok-bar-fill ${urgency}`} style={{ width: `${pct}%` }} />
+                      </div>
+                      <div className="stok-footer">
+                        <span>🕐 {urun.sonGuncelleme}</span>
+                        {urgency==='kritik' && (
+                          <button className="siparis-btn" onClick={()=>alert(`${urun.ad} için sipariş formu açılıyor…`)}>
+                            Sipariş Ver →
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* SAĞ — Trend analizi */}
+            <aside className="depo-panel depo-panel-right">
               <div className="panel-header">
                 <Icon d={icons.trending} size={16} />
                 <h3>Talep Öngörüsü</h3>
@@ -381,10 +380,10 @@ export default function DepoPage() {
                 <p>Yaz sezonu başlangıcı ile birlikte <strong>domates, biber ve salatalık</strong> talebinde belirgin artış bekleniyor. Meyve tarafında kayısı ve incir hasadı bu ay doruk noktasına ulaşacak.</p>
               </div>
             </aside>
+
           </div>
         </div>
-      </div>
-    </main>
-  </div>
+      </main>
+    </div>
   );
 }
