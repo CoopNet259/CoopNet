@@ -1,0 +1,247 @@
+/* 
+  CoopNet Modern Aesthetic
+  Based on clean structural guidelines with original CoopNet color palette.
+*/
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap');
+
+html:root {
+  /* Modern clean tokens */
+  --bg: #f9fafb;
+  --bg-elev: #ffffff;
+  --bg-soft: #f3f4f6;
+  --bg-sunken: #e5e7eb;
+  --line: #e5e7eb;
+  --line-strong: #d1d5db;
+  
+  --ink: #111827;
+  --ink-2: #374151;
+  --ink-3: #6b7280;
+  --ink-4: #9ca3af;
+
+  /* Original CoopNet Colors */
+  --green-900:#1a3328; --green-800:#1e3d2f; --green-700:#245c3e;
+  --green-600:#2d7a52; --green-500:#38996a; --green-400:#4db882;
+  --green-100:#e8f5ee; --green-50:#f2faf6;
+  
+  --red-600:#c0392b; --red-500:#d94032; --red-100:#fdecea;
+  --gold-500:#d97706; --gold-100:#fef3c7;
+  --blue-500:#3b82f6; --blue-100:#dbeafe;
+  --purple-500:#8b5cf6; --purple-100:#ede9fe;
+  
+  /* Mapped states */
+  --accent: var(--green-600);
+  --accent-soft: var(--green-50);
+  --accent-ink: var(--green-800);
+  
+  --warn: var(--gold-500);
+  --warn-soft: var(--gold-100);
+  --danger: var(--red-600);
+  --danger-soft: var(--red-100);
+  --good: var(--green-600);
+  --good-soft: var(--green-50);
+  
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow: 0 4px 12px -4px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 32px -8px rgba(0,0,0,0.12);
+  
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-xl: 24px;
+  
+  --sidebar-w: 250px;
+  --header-h: 64px;
+  
+  /* Legacy names mapping (for compatibility with old class specs) */
+  --grey-50: var(--bg);
+  --grey-100: var(--bg-soft);
+  --grey-200: var(--line);
+  --grey-300: var(--line-strong);
+  --grey-400: var(--ink-4);
+  --grey-500: var(--ink-3);
+  --grey-600: var(--ink-2);
+  --grey-700: var(--ink-2);
+  --grey-800: var(--ink);
+  --grey-900: #000;
+}
+
+body {
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Base Layout overrides for a cleaner look */
+.coopnet-root {
+  display: flex;
+  min-height: 100vh;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+/* Sidebar Modernization */
+/* Instead of dark gradient, use light/clean flat background */
+body .sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: var(--bg);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 100;
+  box-shadow: none; /* remove deep shadow */
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.logo-mark {
+  background: var(--accent);
+  box-shadow: none;
+  border-radius: 8px;
+  position: relative;
+}
+.logo-mark::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1.5px solid rgba(255,255,255,0.4);
+  border-radius: 5px;
+}
+
+body .sidebar-logo-text h1 { color: var(--ink); font-weight: 600; letter-spacing: -0.2px; }
+body .sidebar-logo-text p { color: var(--ink-3); font-weight: 500; }
+
+body .coop-name-sidebar {
+  background: var(--bg-soft);
+  border: 1px solid transparent;
+  color: var(--ink-2);
+  margin: 16px 16px 4px;
+  border-radius: var(--r-sm);
+}
+body .coop-name-sidebar .coop-name-label { color: var(--ink-2); font-weight: 500; }
+
+body .sidebar nav { padding: 8px 10px; }
+body .nav-item {
+  color: var(--ink-2);
+  margin: 2px 0;
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+}
+body .nav-item:hover { background: var(--bg-soft); color: var(--ink); }
+body .nav-item.active {
+  background: var(--ink);
+  color: var(--bg);
+  border-left: none;
+}
+body .nav-item.active svg { color: var(--bg); }
+
+body .sidebar-deco { opacity: 0; display: none; }
+
+body .sidebar-footer {
+  border-top: 1px solid var(--line);
+  padding: 12px 16px;
+}
+body .user-chip { background: transparent; }
+body .user-chip:hover { background: var(--bg-soft); }
+body .user-chip-text h4 { color: var(--ink); }
+body .user-chip-text p { color: var(--ink-3); }
+body .logout-btn { color: var(--ink-3); background: transparent; }
+body .logout-btn:hover { background: var(--bg-soft); color: var(--ink); }
+body .avatar { background: var(--accent-soft); color: var(--accent-ink); box-shadow: none; font-weight: 600; }
+
+body .header {
+  height: var(--header-h);
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  box-shadow: none;
+  padding: 0 24px;
+}
+body .header-coop-title { gap: 10px; }
+body .header-coop-title span { display: none; }
+body .header-coop-name { color: var(--ink); font-weight: 600; font-size: 16px; }
+body .header-coop-sub { color: var(--ink-3); font-weight: 400; }
+
+body .search-box input {
+  background: var(--bg-soft);
+  border: 1px solid transparent;
+  box-shadow: none;
+  border-radius: var(--r-sm);
+}
+body .search-box input:focus {
+  background: var(--bg-elev);
+  border-color: var(--line-strong);
+}
+
+body .icon-btn { color: var(--ink-2); }
+body .icon-btn:hover { background: var(--bg-soft); }
+
+body .content { padding: 24px 32px 60px; max-width: 1480px; margin: 0 auto; width: 100%; }
+
+body .section-block, body .ai-logs-panel, body .ureticiler-panel, body .depo-panel, body .card {
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 24px;
+}
+body .section-block-header, body .panel-header, body .card-head {
+  background: transparent !important;
+  border-bottom: 1px solid var(--line);
+  padding: 16px 20px;
+}
+body .section-block-header h3, body .panel-header h3, body .card-head h3 {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Badges */
+body .panel-badge, body .col-badge, body .urun-badge, body .durum-pill, body .oncelik-pill {
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+body .btn-primary-sm, body .btn-siparis, body .btn-warning-action, body .btn-iletisim {
+  border-radius: var(--r-sm);
+  font-weight: 500;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--bg-elev);
+  color: var(--ink);
+}
+body .btn-siparis, body .btn-primary-sm {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+body .btn-siparis:hover, body .btn-primary-sm:hover { background: #000; }
+body .btn-warning-action:hover, body .btn-iletisim:hover { background: var(--bg-soft); }
+
+body .col-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm);
+}
+body .col-card-head { border-bottom: 1px solid var(--line); background: transparent; }
+body .col-card-icon-wrap { background: var(--bg-soft); color: var(--ink-2); }
+body .col-item { border-bottom: 1px solid var(--line); }
+body .col-item:last-child { border-bottom: none; }
+body .col-footer { background: var(--bg-soft); color: var(--ink-3); border-top: 1px solid var(--line); }
+
+body .acting-item, body .log-row, body .is-item, body .stk-widget-item {
+  border-bottom: 1px dashed var(--line);
+  background: var(--bg-elev);
+}
+body .acting-list { background: transparent; }
+body .acting-item:last-child { border-bottom: none; }
+body .acting-item:hover { background: var(--bg-soft); }
