@@ -1,7 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './talepler.css';
+import { getDashboardSummary, type TrendItem } from '@/lib/api/client';
 
 const Icon = ({ d, size = 18, extra = '' }: { d: string | string[]; size?: number; extra?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={extra}>
@@ -90,10 +91,31 @@ const stkRiskliUrunler = [
   }
 ];
 
+const URUN_EMOJI: Record<string, string> = {
+  domates: '🍅', biber: '🫑', patlıcan: '🍆', salatalık: '🥒',
+  kayısı: '🍑', incir: '🟣', havuç: '🥕', soğan: '🧅', mısır: '🌽', üzüm: '🍇',
+};
+function emojiFor(name: string) {
+  const key = name.toLowerCase();
+  for (const [k, v] of Object.entries(URUN_EMOJI)) {
+    if (key.includes(k)) return v;
+  }
+  return '📦';
+}
+
 export default function TaleplerPage() {
   const router = useRouter();
   const [activeNav, setActiveNav] = useState('talepler');
   const [showNotif, setShowNotif] = useState(false);
+  const [artanTrend, setArtanTrend] = useState<TrendItem[]>([]);
+  const [azalanTrend, setAzalanTrend] = useState<TrendItem[]>([]);
+
+  useEffect(() => {
+    getDashboardSummary().then(data => {
+      setArtanTrend(data.trends.up);
+      setAzalanTrend(data.trends.down);
+    }).catch(console.error);
+  }, []);
 
   const navClick = (item: typeof navItems[0]) => {
     setActiveNav(item.id);
@@ -211,19 +233,21 @@ export default function TaleplerPage() {
                 <div className="panel-header">
                   <Icon d={icons.trendingUp} size={18} extra="text-green" />
                   <h3>Artan Talepler</h3>
-                  <span className="panel-badge green">Top 3</span>
+                  <span className="panel-badge green">Bu Hafta</span>
                 </div>
                 <div className="talep-list">
-                  {artanTalepler.map((t, i) => (
+                  {artanTrend.length === 0 ? (
+                    <div style={{ padding: '16px', color: 'var(--text-muted)' }}>Yüksek artış tespit edilmedi.</div>
+                  ) : artanTrend.map((t, i) => (
                     <div key={i} className="talep-item">
-                      <div className="talep-emoji">{t.emoji}</div>
+                      <div className="talep-emoji">{emojiFor(t.name)}</div>
                       <div className="talep-info">
-                        <strong>{t.urun}</strong>
-                        <p>{t.neden}</p>
+                        <strong>{t.name}</strong>
+                        <p>Geçen haftaya göre talep artışı</p>
                       </div>
                       <div className="talep-stats">
                         <span className="trend-badge up">
-                          <Icon d={icons.trendingUp} size={14} /> {t.artis}
+                          <Icon d={icons.trendingUp} size={14} /> {t.delta}
                         </span>
                       </div>
                     </div>
@@ -236,19 +260,21 @@ export default function TaleplerPage() {
                 <div className="panel-header">
                   <Icon d={icons.trendingDown} size={18} extra="text-red" />
                   <h3>Azalan Talepler</h3>
-                  <span className="panel-badge red">Dikkat Çekenler</span>
+                  <span className="panel-badge red">Bu Hafta</span>
                 </div>
                 <div className="talep-list">
-                  {azalanTalepler.map((t, i) => (
+                  {azalanTrend.length === 0 ? (
+                    <div style={{ padding: '16px', color: 'var(--text-muted)' }}>Belirgin düşüş tespit edilmedi.</div>
+                  ) : azalanTrend.map((t, i) => (
                     <div key={i} className="talep-item">
-                      <div className="talep-emoji">{t.emoji}</div>
+                      <div className="talep-emoji">{emojiFor(t.name)}</div>
                       <div className="talep-info">
-                        <strong>{t.urun}</strong>
-                        <p>{t.neden}</p>
+                        <strong>{t.name}</strong>
+                        <p>Geçen haftaya göre talep düşüşü</p>
                       </div>
                       <div className="talep-stats">
                         <span className="trend-badge down">
-                          <Icon d={icons.trendingDown} size={14} /> {t.dusus}
+                          <Icon d={icons.trendingDown} size={14} /> {t.delta}
                         </span>
                       </div>
                     </div>
