@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getModel } from "@/lib/ai/client";
 import { runAgent } from "@/lib/ai/orchestrator";
 import { logAI } from "@/lib/ai/logger";
+import { assign_task, send_notification } from "@/lib/ai/tools/handlers";
 import type { ParsedHarvest, HarvestAnalysisResult } from "@/lib/ai/types";
 
 // Aşama 1: Türkçe mesajdan ürün/miktar/zaman çıkar
@@ -56,11 +57,57 @@ getirme zamanı: ${parsed.available_time ?? "belirtilmemiş"}.
 
     const agentResult = await runAgent(agentPrompt);
 
+    const stockStatus = extractStockStatus(agentResult.toolCalls);
+    const suggestedActions = deriveActions(parsed, agentResult.toolCalls);
+
+    // Otomatik aksiyon: confidence yüksekse (>= 0.7) görev + bildirim oluştur
+    // Düşük confidence'da insan onayına bırak — hatalı aksiyon almaktansa bekle
+    const executedActions: string[] = [];
+    const autoExecuted = parsed.confidence >= 0.7;
+
+    if (autoExecuted) {
+      // 1. Depo görevi oluştur
+      const timeNote = parsed.available_time ? ` (Teslim: ${parsed.available_time})` : "";
+      const taskResult = await assign_task({
+        role: "warehouse",
+        title: `${parsed.product_name} hasat teslimi — ${parsed.quantity} ${parsed.unit}`,
+        description: `Üretici bildirimi: "${message}"${timeNote}`,
+        priority: stockStatus.is_critical ? "high" : "medium",
+        product_name: parsed.product_name,
+      });
+
+      if (!("error" in taskResult)) {
+        executedActions.push(`Depo görevi oluşturuldu (ID: ${taskResult.task_id})`);
+      }
+
+      // 2. Depocuya bildirim gönder
+      await send_notification({
+        role: "warehouse",
+        title: `Yeni hasat: ${parsed.product_name}`,
+        message: `${parsed.quantity} ${parsed.unit} ${parsed.product_name} teslim alınacak.${timeNote} Görev oluşturuldu.`,
+        type: "info",
+      });
+      executedActions.push("Depo sorumlusuna bildirim gönderildi");
+
+      // 3. Stok kritikse yöneticiye de bildir
+      if (stockStatus.is_critical) {
+        await send_notification({
+          role: "manager",
+          title: `⚠️ Kritik stok + yeni hasat: ${parsed.product_name}`,
+          message: `${parsed.product_name} stoğu kritik (${stockStatus.current_quantity} ${stockStatus.unit}). Yeni hasat yolda: ${parsed.quantity} ${parsed.unit}.`,
+          type: "warning",
+        });
+        executedActions.push("Yöneticiye kritik stok + hasat bildirimi gönderildi");
+      }
+    }
+
     const response: HarvestAnalysisResult = {
       parsed,
-      stock_status: extractStockStatus(agentResult.toolCalls),
+      stock_status: stockStatus,
       recommendation: agentResult.text,
-      actions: deriveActions(parsed, agentResult.toolCalls),
+      actions: suggestedActions,
+      executed_actions: executedActions,
+      auto_executed: autoExecuted,
     };
 
     await logAI({

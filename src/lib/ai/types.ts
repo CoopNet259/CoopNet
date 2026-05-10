@@ -17,5 +17,7 @@ export interface HarvestAnalysisResult {
     fill_percentage: number;
   };
   recommendation: string; // AI'ın Türkçe önerisi
-  actions: string[];      // ["Depo görevi oluştur", "Yöneticiye bildir", ...]
+  actions: string[];      // Önerilen aksiyonlar (metin)
+  executed_actions: string[]; // Otomatik olarak gerçekleştirilen aksiyonlar
+  auto_executed: boolean;     // confidence >= 0.7 ise true — aksiyon alındı
 }
