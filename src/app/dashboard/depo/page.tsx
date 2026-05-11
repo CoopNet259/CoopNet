@@ -4,6 +4,9 @@ import { useRouter } from 'next/navigation';
 import './depo.css';
 import { getDashboardSummary, type StockItem } from '@/lib/api/client';
 
+const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+function todayTr(): string { const n = new Date(); return `${n.getDate()} ${TR_MONTHS[n.getMonth()]} ${n.getFullYear()}`; }
+
 const Icon = ({ d, size = 18 }: { d: string | string[]; size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     {Array.isArray(d) ? d.map((p, i) => <path key={i} d={p} />) : <path d={d} />}
@@ -180,7 +183,7 @@ export default function DepoPage() {
             <span style={{ fontSize: 22 }}>📦</span>
             <div>
               <h2 className="header-coop-name">Depo Yönetimi</h2>
-              <p className="header-coop-sub">Üreten Kadınlar Kooperatif · 10 Mayıs 2026</p>
+              <p className="header-coop-sub">Üreten Kadınlar Kooperatif · {todayTr()}</p>
             </div>
           </div>
           <div className="search-box">

@@ -4,6 +4,9 @@ import { useRouter } from 'next/navigation';
 import './ai-logs.css';
 import { getAILogs } from '@/lib/api/client';
 
+const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+function todayTr(): string { const n = new Date(); return `${n.getDate()} ${TR_MONTHS[n.getMonth()]} ${n.getFullYear()}`; }
+
 const Icon = ({ d, size = 18, extra = '' }: { d: string | string[]; size?: number; extra?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={extra}>
     {Array.isArray(d) ? d.map((p, i) => <path key={i} d={p} />) : <path d={d} />}
@@ -48,21 +51,21 @@ const warningsData = [
 
 const initialAiActingData = [
   { 
-    id: 1, saat: '09:15', tarih: '10 Mayıs 2026', baslik: 'Sipariş Otomatik Onaylandı', kategori: 'Talep Yönetimi', 
+    id: 1, saat: '09:15', tarih: todayTr(), baslik: 'Sipariş Otomatik Onaylandı', kategori: 'Talep Yönetimi', 
     detay_ne: "Migros Market'in 200 kg domates siparişi sistem tarafından otomatik onaylandı.", 
     detay_neden: 'Müşteri güven skorunun yüksek olması ve deponun planlanan kapasitede talebi karşılayabilecek olması.', 
     detay_veri: 'Geçmiş 50 siparişte %100 başarılı teslimat ve %98 zamanında ödeme skoru baz alındı.', 
     detay_etki: 'Manuel onay bekleme süresi ortadan kalktı, operasyon ve teslimat süreci 4 saat erkene alındı.' 
   },
   { 
-    id: 2, saat: '08:42', tarih: '10 Mayıs 2026', baslik: 'Kardeş Üretici Teklifi İletildi', kategori: 'STK ve İsraf Önleme', 
+    id: 2, saat: '08:42', tarih: todayTr(), baslik: 'Kardeş Üretici Teklifi İletildi', kategori: 'STK ve İsraf Önleme', 
     detay_ne: 'Bereket Salça Atölyesine 120 kg STK riski olan domates için otomatik teklif gönderildi.', 
     detay_neden: 'Ürünlerin raf ömrünün dolmak üzere olması ve sistemdeki atölyenin salçalık domates ihtiyacının tespit edilmesi.', 
     detay_veri: 'Stok yaşlandırma analizi ve güncel kardeş üretici talep eşleştirme algoritması sonuçları.', 
     detay_etki: 'Olası 120 kg ürün israfı önlendi ve kooperatif dayanışmasıyla geri kazanıma yönlendirildi.' 
   },
   { 
-    id: 3, saat: '07:30', tarih: '10 Mayıs 2026', baslik: 'Günlük Yönetim Raporu Hazırlandı', kategori: 'Raporlama', 
+    id: 3, saat: '07:30', tarih: todayTr(), baslik: 'Günlük Yönetim Raporu Hazırlandı', kategori: 'Raporlama', 
     detay_ne: 'Dünün işlem özeti ve bugünün tahmini iş yükü derlenerek ana ekrana yansıtıldı.', 
     detay_neden: 'Yöneticinin güne veriye dayalı başlamasını sağlamak ve anlık kararlara zemin hazırlamak.', 
     detay_veri: 'Sistemde gerçekleşen son 24 saatlik işlemler, aktif talepler ve bölgesel pazar fiyat eğilimleri.', 
@@ -161,7 +164,7 @@ export default function AILogsPage() {
             <span style={{ fontSize: 22 }}>🤖</span>
             <div>
               <h2 className="header-coop-name">AI Logs & Erken Uyarı Sistemi</h2>
-              <p className="header-coop-sub">Yapay Zeka İşlem Kayıtları ve Risk Analizleri · 10 Mayıs 2026</p>
+              <p className="header-coop-sub">Yapay Zeka İşlem Kayıtları ve Risk Analizleri · {todayTr()}</p>
             </div>
           </div>
           <div className="search-box">

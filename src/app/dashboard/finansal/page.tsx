@@ -3,6 +3,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './finansal.css';
 
+const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+function todayTr(): string { const n = new Date(); return `${n.getDate()} ${TR_MONTHS[n.getMonth()]} ${n.getFullYear()}`; }
+function yesterdayTr(): string { const n = new Date(); n.setDate(n.getDate() - 1); return `${n.getDate()} ${TR_MONTHS[n.getMonth()]} ${n.getFullYear()}`; }
+
 const Icon = ({ d, size = 18, extra = '' }: { d: string | string[]; size?: number; extra?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={extra}>
     {Array.isArray(d) ? d.map((p, i) => <path key={i} d={p} />) : <path d={d} />}
@@ -190,7 +194,7 @@ export default function FinansalRaporlarPage() {
               <div className="panel-header">
                 <Icon d={icons.calendar} size={18} extra="text-blue-500" />
                 <h3>Dünün Raporu (Özet Metrikler)</h3>
-                <span className="panel-badge" style={{ background: 'var(--blue-100)', color: 'var(--blue-500)' }}>9 Mayıs 2026</span>
+                <span className="panel-badge" style={{ background: 'var(--blue-100)', color: 'var(--blue-500)' }}>{yesterdayTr()}</span>
               </div>
               <div className="dun-rapor-grid">
                 <div className="rapor-kpi-card">
