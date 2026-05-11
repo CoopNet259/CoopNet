@@ -277,7 +277,7 @@ export default function UreticiMesajPage() {
         </div>
 
         {/* Content */}
-        <div className="content">
+        <div className="umesaj-content">
           {/* ── Sol: Gelen mesaj akışı ── */}
           <div className="feed-column">
             <div className="feed-header">
