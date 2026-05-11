@@ -95,7 +95,7 @@ export default function TaleplerPage() {
             stk: item.kalan_gun_mesaj,
             miktar: item.miktar,
             islem: item.islem,
-            kardesler: JSON.parse(item.kardesler || '[]')
+            kardesler: typeof item.kardesler === 'string' ? JSON.parse(item.kardesler) : (item.kardesler || [])
           })));
         }
       })

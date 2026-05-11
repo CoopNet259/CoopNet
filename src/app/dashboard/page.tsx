@@ -133,7 +133,7 @@ export default function DashboardPage() {
       if (data && data.length > 0) {
         setAiOzetData({
           baslik: data[0].baslik,
-          maddeler: JSON.parse(data[0].maddeler || '[]')
+          maddeler: typeof data[0].maddeler === 'string' ? JSON.parse(data[0].maddeler) : (data[0].maddeler || [])
         });
       }
     }).catch(console.error);
