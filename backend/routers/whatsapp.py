@@ -1,11 +1,9 @@
 from __future__ import annotations
 import asyncio
 import json
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, Form
 from fastapi.responses import PlainTextResponse
-from models.schemas import HarvestRequest
 from routers.harvest import _parse_harvest, _resolve_confidence
-from services.orchestrator import run_agent
 from services.logger import log_ai
 from tools.handlers import assign_task, send_notification, check_threshold
 from models.schemas import StockStatus
@@ -81,17 +79,8 @@ async def whatsapp_webhook(
                 "Örnek: _100 kg domates hasat ettim_"
             )
 
-        # Stok kontrolü
-        agent_prompt = (
-            f'Üretici {ProfileName} şunu bildirdi: "{message}"\n\n'
-            f"Çıkardığım bilgi: {parsed.quantity} {parsed.unit} {parsed.product_name} hazır.\n\n"
-            "Şimdi:\n1. Bu ürünün mevcut stok durumunu kontrol et\n"
-            "2. Kritik eşiğe bak\n3. Ne yapılması gerektiğini söyle"
-        )
-        agent_result = await run_agent(agent_prompt)
-
-        threshold_call = next((t for t in agent_result["toolCalls"] if t["tool"] == "check_threshold"), None)
-        tr = threshold_call["result"] if threshold_call else {}
+        # Stok kontrolü — run_agent yerine direkt check_threshold (API kota tasarrufu)
+        tr = check_threshold(parsed.product_name)
         stock_status = StockStatus(
             current_quantity=tr.get("current_quantity", 0),
             unit=tr.get("unit", "kg"),
@@ -193,15 +182,8 @@ async def whatsapp_demo(
                 "confidence_warning": "Mesaj çok belirsiz.",
             }
 
-        agent_prompt = (
-            f'Üretici {ProfileName} şunu bildirdi: "{message}"\n\n'
-            f"Bilgi: {parsed.quantity} {parsed.unit} {parsed.product_name} hazır.\n\n"
-            "Stok durumunu kontrol et ve öneri sun."
-        )
-        agent_result = await run_agent(agent_prompt)
-
-        threshold_call = next((t for t in agent_result["toolCalls"] if t["tool"] == "check_threshold"), None)
-        tr = threshold_call["result"] if threshold_call else {}
+        # run_agent yerine direkt check_threshold — mesaj başına 1 API isteği
+        tr = check_threshold(parsed.product_name)
         stock_status = StockStatus(
             current_quantity=tr.get("current_quantity", 0),
             unit=tr.get("unit", "kg"),

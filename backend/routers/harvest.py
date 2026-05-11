@@ -25,14 +25,26 @@ Girdi: "Bugün 200 kg domates hazır, öğlene kadar getirebilirim"
 
 
 async def _parse_harvest(message: str) -> ParsedHarvest:
-    model = get_model(complex=False)
-    result = await asyncio.to_thread(
-        model.generate_content,
-        message,
-        generation_config={"response_mime_type": "application/json"},
-        system_instruction=PARSE_SYSTEM,
+    import re
+    prompt = (
+        f"{PARSE_SYSTEM}\n\n"
+        f"Mesaj: {message}\n\n"
+        "Sadece JSON nesnesi döndür, başka hiçbir şey yazma."
     )
-    return ParsedHarvest(**json.loads(result.text))
+    model = get_model(complex=False)
+    result = await asyncio.to_thread(model.generate_content, prompt)
+    # gemini-2.5-flash thinking mode: candidates üzerinden text al
+    try:
+        text = result.text.strip()
+    except Exception:
+        # Thinking mode'da text doğrudan erişilemiyorsa parts'tan al
+        parts = result.candidates[0].content.parts
+        text = "".join(p.text for p in parts if hasattr(p, "text") and p.text).strip()
+    # Markdown kod bloğunu temizle
+    m = re.search(r"\{.*\}", text, re.DOTALL)
+    if m:
+        text = m.group(0)
+    return ParsedHarvest(**json.loads(text))
 
 
 def _resolve_confidence(confidence: float) -> dict:

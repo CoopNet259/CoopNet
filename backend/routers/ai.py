@@ -56,7 +56,7 @@ async def daily_summary(req: DailySummaryRequest):
     target_date = req.date or date_type.today().isoformat()
     try:
         ctx = await build_daily_context(target_date)
-        model = get_model()
+        model = get_model(system_instruction=DAILY_SUMMARY_SYSTEM)
 
         prompt = f"""Aşağıdaki günlük operasyon verisini analiz et ve yöneticiye özet hazırla.
 
@@ -79,7 +79,6 @@ Hasat bildirimleri:
         result = await asyncio.to_thread(
             model.generate_content,
             prompt,
-            system_instruction=DAILY_SUMMARY_SYSTEM,
         )
         summary = result.text
         critical_items = [i for i in ctx["inventory"] if i["is_critical"]]
@@ -123,7 +122,7 @@ async def draft_email(req: DraftEmailRequest):
     if not req.product_name or not req.quantity:
         raise HTTPException(status_code=400, detail="product_name ve quantity gerekli")
     try:
-        model = get_model()
+        model = get_model(system_instruction=DRAFT_EMAIL_SYSTEM)
         prompt = (
             f"Kooperatif deposunda {req.product_name} stoğu kritik seviyeye düştü.\n"
             f"Mevcut miktar: {req.quantity} {req.unit}.\n"
@@ -133,7 +132,6 @@ async def draft_email(req: DraftEmailRequest):
             model.generate_content,
             prompt,
             generation_config={"response_mime_type": "application/json"},
-            system_instruction=DRAFT_EMAIL_SYSTEM,
         )
         draft = json.loads(result.text)
         log_ai("draft_email", f"draft_email: {req.product_name} {req.quantity}{req.unit}", draft)
@@ -184,7 +182,7 @@ async def draft_notification(req: DraftNotificationRequest):
     order = order_res.data
 
     try:
-        model = get_model()
+        model = get_model(system_instruction=DRAFT_NOTIF_SYSTEM)
         prompt = (
             f"Aşağıdaki sipariş için müşteriye bildirim taslağı yaz:\n\n"
             f"Müşteri: {order.get('musteri', '')}\n"
@@ -197,7 +195,6 @@ async def draft_notification(req: DraftNotificationRequest):
             model.generate_content,
             prompt,
             generation_config={"response_mime_type": "application/json"},
-            system_instruction=DRAFT_NOTIF_SYSTEM,
         )
         draft = json.loads(result.text)
         log_ai("draft_notification", f"draft_notification: order_id={req.order_id}", {"order_id": req.order_id, "order": order, "draft": draft})
@@ -349,12 +346,11 @@ Sipariş özeti:
 Kritik stok durumu ({len(critical_items)} ürün):
 {chr(10).join(f"- {i['name']}: {i['current']} {i['unit']} (kritik eşiğin altında)" for i in critical_items) or "- Kritik stok yok"}"""
 
-        model = get_model()
+        model = get_model(system_instruction=WEEKLY_INSIGHT_SYSTEM)
         result = await asyncio.to_thread(
             model.generate_content,
             context_text,
             generation_config={"response_mime_type": "application/json"},
-            system_instruction=WEEKLY_INSIGHT_SYSTEM,
         )
         ai_output = json.loads(result.text)
 
