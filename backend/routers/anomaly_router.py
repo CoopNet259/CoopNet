@@ -15,24 +15,22 @@ async def anomaly_summary(target_date: str = Query(default=None)):
     today = target_date or date.today().isoformat()
     anomalies: list[dict] = []
 
-    # ── 1. Stok anomalileri ──────────────────────────────────────
+    # ── 1. Stok anomalileri (products: ad, mevcut_kg, kapasite_kg) ──
     products_res = sb.table("products").select(
-        "id, name, unit, critical_stock_level, inventory(current_quantity)"
+        "id, ad, emoji, mevcut_kg, kapasite_kg"
     ).execute()
 
     for p in (products_res.data or []):
-        inv = p.get("inventory") or {}
-        if isinstance(inv, list):
-            inv = inv[0] if inv else {}
-        current = inv.get("current_quantity", 0)
-        capacity = p["critical_stock_level"] * 4
+        current = p.get("mevcut_kg") or 0
+        capacity = p.get("kapasite_kg") or 1
         pct = round((current / capacity) * 100) if capacity > 0 else 100
+        name = f"{p.get('emoji', '')} {p.get('ad', '')}".strip()
 
         if pct <= 20:
             anomalies.append({
                 "id": f"stock-{p['id']}",
-                "title": f"{p['name']} stok seviyesi kritik",
-                "description": f"{p['name']} stok seviyesi %{pct} olarak ölçüldü. Acil sipariş planlayın.",
+                "title": f"{name} stok seviyesi kritik",
+                "description": f"{name} stok seviyesi %{pct} olarak ölçüldü. Acil sipariş planlayın.",
                 "severity": "kritik",
                 "category": "Depo",
                 "source": "Stok Analizi",
@@ -41,8 +39,8 @@ async def anomaly_summary(target_date: str = Query(default=None)):
         elif pct <= 40:
             anomalies.append({
                 "id": f"stock-{p['id']}",
-                "title": f"{p['name']} stoğu düşük",
-                "description": f"{p['name']} şu anda %{pct} dolulukta. Talep artışı riski mevcut.",
+                "title": f"{name} stoğu düşük",
+                "description": f"{name} şu anda %{pct} dolulukta. Talep artışı riski mevcut.",
                 "severity": "yuksek",
                 "category": "Depo",
                 "source": "Stok Analizi",
@@ -72,22 +70,21 @@ async def anomaly_summary(target_date: str = Query(default=None)):
             "recommendation": "Riskli ürünü hızlıca kardeş üretici ile eşleştirin.",
         })
 
-    # ── 3. AI hata logları ───────────────────────────────────────
+    # ── 3. AI logları (ai_logs: tip, baslik, mesaj, kategori) ────
     logs_res = (
         sb.table("ai_logs")
-        .select("id, action_type, input_text, status")
-        .eq("status", "error")
-        .order("created_at", desc=True)
+        .select("id, tip, baslik, mesaj, kategori")
+        .eq("tip", "Anomali")
         .limit(5)
         .execute()
     )
     for log in (logs_res.data or []):
         anomalies.append({
             "id": f"ai-{log['id']}",
-            "title": f"AI işlem hatası: {log['action_type']}",
-            "description": f"AI eylemi sırasında hata oluştu. Girdi: {str(log.get('input_text', ''))[:80]}",
+            "title": f"AI tespiti: {log.get('baslik', '')}",
+            "description": log.get("mesaj", ""),
             "severity": "kritik",
-            "category": "AI Tespiti",
+            "category": log.get("kategori", "AI Tespiti"),
             "source": "AI Görüşü",
             "recommendation": "Hatanın kaynağını inceleyin ve gerekirse depo operasyonunu güncelleyin.",
         })

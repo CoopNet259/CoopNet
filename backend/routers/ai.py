@@ -170,9 +170,10 @@ async def draft_notification(req: DraftNotificationRequest):
         raise HTTPException(status_code=400, detail="order_id gerekli")
 
     sb = get_supabase()
+    # requests tablosu: musteri, urun, miktar, saat, durum
     order_res = (
-        sb.table("orders")
-        .select("customer_name, quantity, unit, status, created_at, products(name)")
+        sb.table("requests")
+        .select("musteri, urun, miktar, saat, durum")
         .eq("id", req.order_id)
         .single()
         .execute()
@@ -181,20 +182,16 @@ async def draft_notification(req: DraftNotificationRequest):
         raise HTTPException(status_code=404, detail="Sipariş bulunamadı")
 
     order = order_res.data
-    product_name = (order.get("products") or {}).get("name", "Bilinmeyen")
-
-    from datetime import datetime
-    created_tr = datetime.fromisoformat(order["created_at"].replace("Z", "+00:00")).strftime("%d.%m.%Y")
 
     try:
         model = get_model()
         prompt = (
             f"Aşağıdaki sipariş için müşteriye bildirim taslağı yaz:\n\n"
-            f"Müşteri: {order['customer_name']}\n"
-            f"Ürün: {product_name}\n"
-            f"Miktar: {order['quantity']} {order['unit']}\n"
-            f"Durum: {order['status']}\n"
-            f"Sipariş tarihi: {created_tr}"
+            f"Müşteri: {order.get('musteri', '')}\n"
+            f"Ürün: {order.get('urun', '')}\n"
+            f"Miktar: {order.get('miktar', '')}\n"
+            f"Durum: {order.get('durum', '')}\n"
+            f"Saat: {order.get('saat', '')}"
         )
         result = await asyncio.to_thread(
             model.generate_content,
@@ -222,93 +219,59 @@ async def ai_logs(
     sb = get_supabase()
     start, end = f"{target}T00:00:00", f"{target}T23:59:59"
 
-    notif_res = (
-        sb.table("notifications")
-        .select("id, title, message, type, role, is_read, created_at")
-        .in_("type", ["warning", "error", "info"])
-        .gte("created_at", start)
-        .lte("created_at", end)
-        .order("created_at", desc=True)
-        .limit(limit)
-        .execute()
-    )
+    # ai_logs tablosu: id, zaman, tarih, tip, baslik, mesaj, renk, kategori
+    # notifications tablosu yok — ai_logs'tan hem alert hem action üretiyoruz
     logs_res = (
         sb.table("ai_logs")
-        .select("id, action_type, input_text, output_data, status, created_at")
-        .gte("created_at", start)
-        .lte("created_at", end)
-        .order("created_at", desc=True)
+        .select("id, zaman, tarih, tip, baslik, mesaj, renk, kategori, detay_ne, detay_neden, detay_etki")
+        .order("id", desc=True)
         .limit(limit)
         .execute()
     )
 
-    def fmt_time(iso: str) -> str:
-        from datetime import datetime
-        return datetime.fromisoformat(iso.replace("Z", "+00:00")).strftime("%H:%M")
+    def tip_to_level(tip: str) -> str:
+        if tip in ("Anomali", "Hata"):
+            return "danger"
+        if tip in ("Tahmin", "Uyarı"):
+            return "warn"
+        return "info"
 
-    def role_label(role: str) -> str:
-        return {"manager": "Yönetici", "warehouse": "Depo · Stok", "producer": "Üretici sinyali", "customer_rep": "Müşteri hizmetleri"}.get(role, role)
-
-    def action_title(at: str) -> str:
+    def kategori_ctx(kat: str) -> list[str]:
         return {
-            "harvest_analyze": "Hasat analizi yapıldı", "chat": "Sohbet isteği yanıtlandı",
-            "daily_summary": "Günlük özet oluşturuldu", "draft_email": "Tedarikçi mail taslağı hazırlandı",
-            "draft_notification": "Müşteri bildirimi taslağı hazırlandı", "stock_check": "Stok kontrolü yapıldı",
-            "anomaly_check": "Anomali taraması tamamlandı",
-        }.get(at, at)
+            "Depo": ["Depo", "Stok"], "Trend": ["AI", "Trend"],
+            "Raporlama": ["AI", "Rapor"], "İletişim": ["AI", "Bildirim"],
+            "AI Tespiti": ["AI", "Anomali"],
+        }.get(kat, ["AI"])
 
-    def action_ctx(at: str) -> list[str]:
-        return {
-            "harvest_analyze": ["Üretici", "Hasat", "Stok"], "chat": ["AI", "Sohbet"],
-            "daily_summary": ["AI", "Özet", "Günlük"], "draft_email": ["Tedarikçi", "Mail"],
-            "draft_notification": ["Müşteri", "Bildirim"], "stock_check": ["Depo", "Stok"],
-            "anomaly_check": ["AI", "Anomali"],
-        }.get(at, ["AI"])
-
-    def extract_confidence(data) -> int:
-        if isinstance(data, dict) and "parsed" in data:
-            p = data["parsed"]
-            if isinstance(p, dict) and "confidence" in p:
-                return round(p["confidence"] * 100)
-        return 92
-
-    def extract_impact(at: str, data) -> str:
-        if not isinstance(data, dict):
-            return "iş akışına dahil edildi"
-        if at == "stock_check":
-            return f"{data['critical_count']} kritik ürün tespit edildi" if data.get("critical_count") else "tüm stoklar yeterli"
-        if at == "anomaly_check":
-            return f"{data['anomaly_count']} anomali tespit edildi" if data.get("anomaly_count") else "anomali yok"
-        if at == "harvest_analyze":
-            executed = len(data.get("executed_actions", []))
-            return f"{executed} otomatik aksiyon alındı" if executed else "öneri üretildi"
-        return "iş akışına dahil edildi"
+    all_logs = logs_res.data or []
 
     alerts = [
         {
-            "id": n["id"],
-            "level": "danger" if n["type"] == "error" else "warn" if n["type"] == "warning" else "info",
-            "title": n["title"],
-            "desc": n["message"],
-            "source": role_label(n["role"]),
-            "time": fmt_time(n["created_at"]),
-            "is_read": n["is_read"],
+            "id": str(log["id"]),
+            "level": tip_to_level(log.get("tip", "")),
+            "title": log.get("baslik", ""),
+            "desc": log.get("mesaj", ""),
+            "source": log.get("kategori", "AI"),
+            "time": log.get("zaman", ""),
+            "is_read": False,
         }
-        for n in (notif_res.data or [])
+        for log in all_logs
+        if log.get("tip") in ("Anomali", "Hata", "Uyarı", "Tahmin")
     ]
 
     actions = [
         {
-            "id": log["id"],
-            "time": fmt_time(log["created_at"]),
-            "title": action_title(log["action_type"]),
-            "why": log["input_text"],
-            "ctx": action_ctx(log["action_type"]),
-            "status": log.get("status", "bilgi"),
-            "confidence": extract_confidence(log.get("output_data")),
-            "impact": extract_impact(log["action_type"], log.get("output_data")),
+            "id": str(log["id"]),
+            "time": log.get("zaman", ""),
+            "title": log.get("baslik", ""),
+            "why": log.get("detay_neden") or log.get("mesaj", ""),
+            "ctx": kategori_ctx(log.get("kategori", "")),
+            "status": "success",
+            "confidence": 92,
+            "impact": log.get("detay_etki") or "iş akışına dahil edildi",
         }
-        for log in (logs_res.data or [])
+        for log in all_logs
+        if log.get("tip") in ("Rapor", "Otomasyon", "Aksiyon")
     ]
 
     summary = {
@@ -317,7 +280,7 @@ async def ai_logs(
         "danger_count": sum(1 for a in alerts if a["level"] == "danger"),
         "warn_count": sum(1 for a in alerts if a["level"] == "warn"),
         "info_count": sum(1 for a in alerts if a["level"] == "info"),
-        "unread_count": sum(1 for a in alerts if not a["is_read"]),
+        "unread_count": len(alerts),
     }
 
     return {"date": target, "summary": summary, "alerts": alerts, "actions": actions}
@@ -359,53 +322,22 @@ async def weekly_insight(req: WeeklyInsightRequest):
 
     sb = get_supabase()
     try:
-        orders_res = (
-            sb.table("orders")
-            .select("status, quantity, products(name)")
-            .gte("created_at", f"{week_start}T00:00:00")
-            .lt("created_at", f"{week_end}T00:00:00")
-            .execute()
-        )
+        # requests tablosu: musteri, urun, miktar, saat, durum
+        orders_res = sb.table("requests").select("durum, miktar, urun").execute()
         orders = orders_res.data or []
         total_orders = len(orders)
-        delivered = sum(1 for o in orders if o["status"] == "delivered")
-        delayed = sum(1 for o in orders if o["status"] == "delayed")
+        delivered = sum(1 for o in orders if o.get("durum") == "teslim edildi")
+        delayed = sum(1 for o in orders if o.get("durum") in ("gecikti", "gecikmiş"))
         fulfillment_rate = round((delivered / total_orders) * 100) if total_orders > 0 else 0
 
-        products_res = sb.table("products").select("id, name, unit, critical_stock_level").execute()
+        # products tablosu: ad, mevcut_kg, kapasite_kg
+        products_res = sb.table("products").select("ad, mevcut_kg, kapasite_kg").execute()
         critical_items = []
         for p in (products_res.data or []):
-            inv = sb.table("inventory").select("current_quantity").eq("product_id", p["id"]).single().execute()
-            current = (inv.data or {}).get("current_quantity", 0)
-            if current <= p["critical_stock_level"]:
-                critical_items.append({"name": p["name"], "current": current, "unit": p["unit"]})
-
-        prev_week_start = (date_type.fromisoformat(week_start) - timedelta(days=7)).isoformat()
-        prev_res = (
-            sb.table("orders")
-            .select("quantity, product_id")
-            .gte("created_at", f"{prev_week_start}T00:00:00")
-            .lt("created_at", f"{week_start}T00:00:00")
-            .execute()
-        )
-        prev_orders = prev_res.data or []
-        this_total = sum(o.get("quantity", 0) for o in orders)
-        prev_total = sum(o.get("quantity", 0) for o in prev_orders)
-        demand_trend = round(((this_total - prev_total) / prev_total) * 100) if prev_total > 0 else 0
-
-        harvests_res = (
-            sb.table("producer_product_reports")
-            .select("quantity, unit, status, products(name), profiles(full_name)")
-            .gte("created_at", f"{week_start}T00:00:00")
-            .lt("created_at", f"{week_end}T00:00:00")
-            .execute()
-        )
-        harvests = harvests_res.data or []
-
-        def _get(raw, key: str, default="Bilinmeyen") -> str:
-            if isinstance(raw, dict):
-                return raw.get(key, default)
-            return default
+            current = p.get("mevcut_kg") or 0
+            capacity = p.get("kapasite_kg") or 1
+            if current <= capacity * 0.25:
+                critical_items.append({"name": p.get("ad", ""), "current": current, "unit": "kg"})
 
         context_text = f"""Hafta: {week_start} – {week_end}
 
@@ -413,13 +345,9 @@ Sipariş özeti:
 - Toplam: {total_orders}
 - Teslim edildi: {delivered} (%{fulfillment_rate} karşılama)
 - Gecikmiş: {delayed}
-- Geçen haftaya göre talep değişimi: {'+' if demand_trend >= 0 else ''}{demand_trend}%
 
 Kritik stok durumu ({len(critical_items)} ürün):
-{chr(10).join(f"- {i['name']}: {i['current']} {i['unit']} (kritik eşiğin altında)" for i in critical_items) or "- Kritik stok yok"}
-
-Hasat bildirimleri ({len(harvests)} kayıt):
-{chr(10).join(f"- {_get(h.get('profiles'), 'full_name')}: {h['quantity']} {h['unit']} {_get(h.get('products'), 'name')} ({h['status']})" for h in harvests[:5]) or "- Kayıt yok"}"""
+{chr(10).join(f"- {i['name']}: {i['current']} {i['unit']} (kritik eşiğin altında)" for i in critical_items) or "- Kritik stok yok"}"""
 
         model = get_model()
         result = await asyncio.to_thread(
@@ -438,7 +366,7 @@ Hasat bildirimleri ({len(harvests)} kayıt):
                 "delivered_orders": delivered,
                 "delayed_orders": delayed,
                 "fulfillment_rate": fulfillment_rate,
-                "demand_trend_pct": demand_trend,
+                "demand_trend_pct": 0,
                 "critical_items": critical_items,
             },
             "insight": ai_output.get("insight", ""),
@@ -460,5 +388,5 @@ Hasat bildirimleri ({len(harvests)} kayıt):
 @router.get("/reports")
 async def ai_reports():
     sb = get_supabase()
-    res = sb.table("ai_reports").select("*").order("id", ascending=True).execute()
+    res = sb.table("ai_reports").select("*").order("id").execute()
     return res.data or []

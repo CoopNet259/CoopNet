@@ -5,62 +5,51 @@ from services.anomaly import compute_daily_anomaly_insights
 
 async def build_daily_context(date: str) -> dict:
     sb = get_supabase()
-    start = f"{date}T00:00:00"
-    end   = f"{date}T23:59:59"
 
-    orders_res    = sb.table("orders").select("status").gte("created_at", start).lte("created_at", end).execute()
-    inventory_res = sb.table("inventory").select("current_quantity, unit, products(name, critical_stock_level)").execute()
-    tasks_res     = sb.table("tasks").select("status").gte("created_at", start).lte("created_at", end).execute()
-    harvests_res  = (
-        sb.table("producer_product_reports")
-        .select("quantity, unit, status, profiles(full_name), products(name)")
-        .gte("created_at", start)
-        .lte("created_at", end)
-        .execute()
-    )
+    # requests tablosu (siparişler): musteri, urun, miktar, durum
+    requests_res = sb.table("requests").select("durum, miktar, urun").execute()
 
-    orders    = orders_res.data or []
-    inventory = inventory_res.data or []
-    tasks     = tasks_res.data or []
-    harvests  = harvests_res.data or []
+    # products tablosu (stok): ad, mevcut_kg, kapasite_kg
+    products_res = sb.table("products").select("ad, mevcut_kg, kapasite_kg").execute()
+
+    # tasks tablosu: is_name, durum (boolean)
+    tasks_res = sb.table("tasks").select("is_name, durum").execute()
+
+    requests = requests_res.data or []
+    products = products_res.data or []
+    tasks    = tasks_res.data or []
     anomalies = compute_daily_anomaly_insights(date)
 
-    def _product(raw) -> dict:
-        if isinstance(raw, list):
-            return raw[0] if raw else {}
-        return raw or {}
+    # Teslim durumu: "teslim edildi" / "bekliyor" / "gecikti"
+    total_orders = len(requests)
+    pending   = sum(1 for o in requests if o.get("durum") == "bekliyor")
+    delivered = sum(1 for o in requests if o.get("durum") == "teslim edildi")
+    delayed   = sum(1 for o in requests if o.get("durum") in ("gecikti", "gecikmiş"))
+
+    inventory_list = [
+        {
+            "name":        p.get("ad", ""),
+            "quantity":    p.get("mevcut_kg", 0) or 0,
+            "unit":        "kg",
+            "is_critical": (p.get("mevcut_kg") or 0) <= (p.get("kapasite_kg") or 1) * 0.25,
+        }
+        for p in products
+    ]
 
     return {
         "date": date,
         "orders": {
-            "total":     len(orders),
-            "pending":   sum(1 for o in orders if o["status"] == "pending"),
-            "delivered": sum(1 for o in orders if o["status"] == "delivered"),
-            "delayed":   sum(1 for o in orders if o["status"] == "delayed"),
+            "total":     total_orders,
+            "pending":   pending,
+            "delivered": delivered,
+            "delayed":   delayed,
         },
-        "inventory": [
-            {
-                "name":        _product(i.get("products")).get("name", ""),
-                "quantity":    i["current_quantity"],
-                "unit":        i["unit"],
-                "is_critical": i["current_quantity"] <= _product(i.get("products")).get("critical_stock_level", 0),
-            }
-            for i in inventory
-        ],
+        "inventory": inventory_list,
         "tasks": {
             "total": len(tasks),
-            "done":  sum(1 for t in tasks if t["status"] == "done"),
-            "todo":  sum(1 for t in tasks if t["status"] in ("todo", "in_progress")),
+            "done":  sum(1 for t in tasks if t.get("durum")),
+            "todo":  sum(1 for t in tasks if not t.get("durum")),
         },
-        "harvests": [
-            {
-                "producer": _product(h.get("profiles")).get("full_name", "Bilinmeyen"),
-                "product":  _product(h.get("products")).get("name", "Bilinmeyen"),
-                "quantity": h["quantity"],
-                "unit":     h["unit"],
-                "status":   h["status"],
-            }
-            for h in harvests
-        ],
+        "harvests": [],  # harvest tablosu mevcut şemada yok
         "anomalies": anomalies,
     }
