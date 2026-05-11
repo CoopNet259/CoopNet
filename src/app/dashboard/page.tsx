@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './dashboard.css';
-import { getDashboardSummary, type DashboardSummary, type StockItem, type OrderItem, type TaskItem } from '@/lib/api/client';
+import { getDashboardSummary, patchTask, type DashboardSummary, type StockItem, type OrderItem, type TaskItem } from '@/lib/api/client';
 
 /* ── Icons ── */
 const Icon = ({ d, size = 18, extra = '' }: { d: string | string[]; size?: number; extra?: string }) => (
@@ -90,7 +90,11 @@ export default function DashboardPage() {
   };
 
   const toggleTask = (id: string) => {
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    const newDone = !task.done;
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, done: newDone } : t));
+    patchTask(id, newDone).catch(console.error);
   };
 
   // Türetilmiş veriler
@@ -190,7 +194,7 @@ export default function DashboardPage() {
             <span className="header-coop-icon">🌱</span>
             <div>
               <h2 className="header-coop-name">Üreten Kadınlar Kooperatif</h2>
-              <p className="header-coop-sub">Yönetim Paneli · 10 Mayıs 2026</p>
+              <p className="header-coop-sub">Yönetim Paneli · {summary ? new Date(summary.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}</p>
             </div>
           </div>
 

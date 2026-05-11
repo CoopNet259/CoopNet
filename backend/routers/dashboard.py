@@ -1,6 +1,7 @@
 from __future__ import annotations
 from datetime import date, timedelta
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from database import get_supabase
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
@@ -140,3 +141,21 @@ async def dashboard_summary():
             "down": [t for t in trends if not t["up"]][:3],
         },
     }
+
+
+class TaskToggle(BaseModel):
+    done: bool
+
+
+@router.patch("/tasks/{task_id}")
+async def toggle_task(task_id: str, body: TaskToggle):
+    sb = get_supabase()
+    res = (
+        sb.table("tasks")
+        .update({"status": "done" if body.done else "todo"})
+        .eq("id", task_id)
+        .execute()
+    )
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Görev bulunamadı")
+    return {"id": task_id, "done": body.done}

@@ -98,6 +98,12 @@ export interface AILogsResponse {
 export const getDashboardSummary = () =>
   api<DashboardSummary>('/api/dashboard/summary');
 
+export const patchTask = (task_id: string, done: boolean) =>
+  api<{ id: string; done: boolean }>(`/api/dashboard/tasks/${task_id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ done }),
+  });
+
 export const postChat = (message: string, history: ChatMessage[] = []) =>
   api<AgentResult>('/api/ai/chat', {
     method: 'POST',
