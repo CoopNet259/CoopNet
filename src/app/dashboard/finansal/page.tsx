@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './finansal.css';
 
@@ -41,14 +41,14 @@ const navItems = [
   { id: 'ai-logs',     label: 'AI Logs',           icon: 'log',       path: '/dashboard/ai-logs' },
 ];
 
-const yapilacaklar = [
+const initialYapilacaklar = [
   { id: 1, is: 'Mersin Belediyesi hibe başvurusu evraklarının yüklenmesi', durum: false },
   { id: 2, is: 'Kardeş Üretici "Tatlıcı Şirin" aylık fatura kesimi', durum: false },
   { id: 3, is: 'Günlük perakende satışların muhasebeye işlenmesi', durum: true },
   { id: 4, is: 'Gelecek haftanın ambalaj sipariş bütçesinin onaylanması', durum: false },
 ];
 
-const haftalikVeriler = [
+const initialHaftalikVeriler = [
   { id: 1, baslik: 'Toplam Gelir', deger: '₺145,200', trend: '+%12', yon: 'up', icon: 'dollar' },
   { id: 2, baslik: 'Operasyonel Gider', deger: '₺42,800', trend: '-%4', yon: 'down', icon: 'pieChart' },
   { id: 3, baslik: 'Kardeş Üretici İşlem Hacmi', deger: '₺18,500', trend: '+%35', yon: 'up', icon: 'users' },
@@ -58,8 +58,21 @@ const haftalikVeriler = [
 export default function FinansalRaporlarPage() {
   const router = useRouter();
   const [activeNav, setActiveNav] = useState('finansal');
-  const [isler, setIsler] = useState(yapilacaklar);
   const [showNotif, setShowNotif] = useState(false);
+  const [isler, setIsler] = useState(initialYapilacaklar);
+  const [haftalik, setHaftalik] = useState(initialHaftalikVeriler);
+
+  useEffect(() => {
+    fetch('/api/tasks').then(res => res.json()).then(data => {
+      if (data && data.length > 0) setIsler(data.map((d: any) => ({
+        id: d.id, is: d.is_name, durum: d.durum
+      })));
+    }).catch(console.error);
+
+    fetch('/api/financial-stats').then(res => res.json()).then(data => {
+      if (data && data.length > 0) setHaftalik(data);
+    }).catch(console.error);
+  }, []);
 
   const navClick = (item: typeof navItems[0]) => {
     setActiveNav(item.id);
@@ -235,7 +248,7 @@ export default function FinansalRaporlarPage() {
                 <span className="panel-badge green">Bu Hafta</span>
               </div>
               <div className="haftalik-list">
-                {haftalikVeriler.map(veri => (
+                {haftalik.map(veri => (
                   <div key={veri.id} className="haftalik-item">
                     <div className="haftalik-info">
                       <div className="haftalik-icon">

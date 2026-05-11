@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './talepler.css';
 
@@ -52,7 +52,7 @@ const azalanTalepler = [
   { emoji: '🥕', urun: 'Havuç', dusus: '-%5', neden: 'Hasat sonu, kalite düşüşü beklentisi nedeniyle alımlar yavaşladı.' },
 ];
 
-const stkRiskliUrunler = [
+const initialStkRiskliUrunler = [
   {
     id: 1,
     emoji: '🍅',
@@ -61,8 +61,7 @@ const stkRiskliUrunler = [
     miktar: '120 kg',
     islem: 'Salça Üretimi',
     kardesler: [
-      { ad: 'Bereket Salça Atölyesi', tip: 'Kardeş Üretici', avatar: 'BS' },
-      { ad: 'Zeynep Ana Yöresel', tip: 'Kardeş Üretici', avatar: 'ZA' }
+      { ad: 'Bereket Salça Atölyesi', avatar: 'BS', tip: 'Kardeş Üretici' }
     ]
   },
   {
@@ -73,19 +72,7 @@ const stkRiskliUrunler = [
     miktar: '45 kg',
     islem: 'Reçel Üretimi',
     kardesler: [
-      { ad: 'Tatlıcı Şirin Koop.', tip: 'Kardeş Üretici', avatar: 'TŞ' }
-    ]
-  },
-  {
-    id: 3,
-    emoji: '🍇',
-    urun: 'Üzüm',
-    stk: '4 Gün Kaldı',
-    miktar: '85 kg',
-    islem: 'Pekmez & Şıra',
-    kardesler: [
-      { ad: 'Şifa Pekmezcilik', tip: 'Kardeş Üretici', avatar: 'ŞP' },
-      { ad: 'Doğal Lezzetler', tip: 'Kardeş Üretici', avatar: 'DL' }
+      { ad: 'Tatlıcı Şirin Kooperatifi', avatar: 'TŞ', tip: 'Kardeş Üretici' }
     ]
   }
 ];
@@ -94,6 +81,26 @@ export default function TaleplerPage() {
   const router = useRouter();
   const [activeNav, setActiveNav] = useState('talepler');
   const [showNotif, setShowNotif] = useState(false);
+  const [stkData, setStkData] = useState<any[]>(initialStkRiskliUrunler);
+
+  useEffect(() => {
+    fetch('/api/stk-alerts')
+      .then(res => res.json())
+      .then(data => {
+        if (data && !data.error && data.length > 0) {
+          setStkData(data.map((item: any) => ({
+            id: item.id,
+            emoji: item.emoji,
+            urun: item.urun,
+            stk: item.kalan_gun_mesaj,
+            miktar: item.miktar,
+            islem: item.islem,
+            kardesler: JSON.parse(item.kardesler || '[]')
+          })));
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   const navClick = (item: typeof navItems[0]) => {
     setActiveNav(item.id);
@@ -271,7 +278,7 @@ export default function TaleplerPage() {
               </div>
               
               <div className="stk-grid">
-                {stkRiskliUrunler.map(urun => (
+                {stkData.map(urun => (
                   <div key={urun.id} className="stk-card">
                     <div className="stk-card-top">
                       <div className="stk-urun">

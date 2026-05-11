@@ -60,7 +60,7 @@ const ureticiler = [
   { id: 3, ad: 'Hatice Yıldız', urun: 'Patlıcan', miktar: '70 kg',  mesafe: '5 km',  puan: 4.8, emoji: '🍆' },
 ];
 
-const dunOzeti = [
+const initialDunOzeti = [
   { label: 'Toplam Sipariş',   value: '14',      icon: '📦', renk: 'green' },
   { label: 'Teslim Edilen',    value: '11',      icon: '✅', renk: 'green' },
   { label: 'Bekleyen',         value: '3',       icon: '⏳', renk: 'gold'  },
@@ -69,7 +69,7 @@ const dunOzeti = [
   { label: 'Anomali Tespiti',  value: '1',       icon: '⚠️', renk: 'red'   },
 ];
 
-const bugunIsler = [
+const initialBugunIsler = [
   { id: 1, is: 'Migros siparişi için domates temini',     durum: false, oncelik: 'yuksek' },
   { id: 2, is: 'Depo stok sayımı yapılacak',              durum: false, oncelik: 'orta'   },
   { id: 3, is: 'Ayşe Demir ile fiyat görüşmesi',          durum: true,  oncelik: 'orta'   },
@@ -77,14 +77,14 @@ const bugunIsler = [
   { id: 5, is: 'Organik Pazar sözleşmesi imzalanacak',    durum: false, oncelik: 'dusuk'  },
 ];
 
-const aiLogs = [
+const initialAiLogs = [
   { zaman: '09:14', tip: 'Anomali', mesaj: 'Domates stoku kritik seviyenin altına düştü. Acil sipariş önerisi gönderildi.', renk: 'red' },
   { zaman: '08:55', tip: 'Tahmin',  mesaj: 'Bu hafta biber talebi %18 artış bekleniyor. Üreticilere bildirim yapıldı.',       renk: 'gold' },
   { zaman: '08:30', tip: 'Rapor',   mesaj: 'Dün gerçekleşen 14 sipariş için günlük özet raporu oluşturuldu.',                renk: 'green' },
   { zaman: '07:45', tip: 'Otomasyon',mesaj: 'Organik Pazar talebine otomatik yanıt taslağı hazırlandı.',                    renk: 'blue' },
 ];
 
-const aiOzet = {
+const initialAiOzet = {
   baslik: 'AI Günlük Analiz Özeti — 10 Mayıs 2026',
   maddeler: [
     'Depoda 3 ürün kritik stok seviyesinin altında. Öncelikli sipariş gerekiyor.',
@@ -100,10 +100,44 @@ export default function DashboardPage() {
   const router = useRouter();
   const [activeNav, setActiveNav] = useState('dashboard');
   const [showNotif, setShowNotif] = useState(false);
-  const [isler, setIsler] = useState(bugunIsler);
   const [barsReady, setBarsReady] = useState(false);
   const [depoUyariler, setDepoUyariler] = useState(initialDepoUyariler);
   const [bugunTalepler, setBugunTalepler] = useState(initialBugunTalepler);
+  
+  const [coopName, setCoopName] = useState('Üreten Kadınlar Kooperatif');
+  const [dunOzeti, setDunOzeti] = useState(initialDunOzeti);
+  const [isler, setIsler] = useState(initialBugunIsler);
+  const [aiLogsList, setAiLogsList] = useState(initialAiLogs);
+  const [aiOzetData, setAiOzetData] = useState(initialAiOzet);
+
+  useEffect(() => {
+    fetch('/api/cooperatives').then(res => res.json()).then(data => {
+      if (data && data.length > 0) setCoopName(data[0].name);
+    }).catch(console.error);
+
+    fetch('/api/dashboard-stats').then(res => res.json()).then(data => {
+      if (data && data.length > 0) setDunOzeti(data);
+    }).catch(console.error);
+
+    fetch('/api/tasks').then(res => res.json()).then(data => {
+      if (data && data.length > 0) setIsler(data.map((d: any) => ({
+        id: d.id, is: d.is_name, durum: d.durum, oncelik: d.oncelik
+      })));
+    }).catch(console.error);
+
+    fetch('/api/ai-logs').then(res => res.json()).then(data => {
+      if (data && data.length > 0) setAiLogsList(data);
+    }).catch(console.error);
+
+    fetch('/api/ai-reports').then(res => res.json()).then(data => {
+      if (data && data.length > 0) {
+        setAiOzetData({
+          baslik: data[0].baslik,
+          maddeler: JSON.parse(data[0].maddeler || '[]')
+        });
+      }
+    }).catch(console.error);
+  }, []);
 
   useEffect(() => {
     fetch('/api/requests')
@@ -206,7 +240,7 @@ export default function DashboardPage() {
           <div className="user-chip">
             <div className="avatar">ÜK</div>
             <div className="user-chip-text">
-              <h4>Üreten Kadınlar</h4>
+              <h2>{coopName}</h2>
               <p>Admin Paneli</p>
             </div>
           </div>
@@ -224,7 +258,7 @@ export default function DashboardPage() {
           <div className="header-coop-title">
             <span className="header-coop-icon">🌱</span>
             <div>
-              <h2 className="header-coop-name">Üreten Kadınlar Kooperatif</h2>
+              <h1 className="coop-name">{coopName}</h1>
               <p className="header-coop-sub">Yönetim Paneli · 10 Mayıs 2026</p>
             </div>
           </div>
@@ -497,8 +531,8 @@ export default function DashboardPage() {
               </button>
             </div>
             <div className="ai-log-list">
-              {aiLogs.map((log, i) => (
-                <div key={i} className={`ai-log-item log-${log.renk}`}>
+              {aiLogsList.map((log: any, idx: number) => (
+                <div key={idx} className={`ai-log-item log-${log.renk}`}>
                   <div className={`log-tip log-tip-${log.renk}`}>{log.tip}</div>
                   <div className="log-mesaj">{log.mesaj}</div>
                   <div className="log-zaman">{log.zaman}</div>
@@ -519,13 +553,15 @@ export default function DashboardPage() {
             <div className="ai-ozet-card">
               <div className="ai-ozet-baslik">
                 <span className="ai-chip">AI · Gemini</span>
-                <span className="ai-ozet-title">{aiOzet.baslik}</span>
+                <div className="summary-header">
+                  <h3>{aiOzetData.baslik}</h3>
+                </div>
               </div>
-              <ul className="ai-ozet-list">
-                {aiOzet.maddeler.map((m, i) => (
-                  <li key={i}>
+              <ul className="summary-list">
+                {aiOzetData.maddeler.map((madde: string, idx: number) => (
+                  <li key={idx}>
                     <span className="ai-bullet">›</span>
-                    {m}
+                    {madde}
                   </li>
                 ))}
               </ul>

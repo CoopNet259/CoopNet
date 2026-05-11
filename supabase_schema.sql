@@ -121,3 +121,110 @@ INSERT INTO ai_logs (id, zaman, tarih, tip, baslik, mesaj, renk, detay_ne, detay
 (3, '08:30', '10 Mayıs 2026', 'Rapor', 'Günlük Özet', 'Dün gerçekleşen 14 sipariş için günlük özet raporu oluşturuldu.', 'green', NULL, NULL, NULL, NULL, 'Raporlama'),
 (4, '07:45', '10 Mayıs 2026', 'Otomasyon', 'Otomatik Yanıt', 'Organik Pazar talebine otomatik yanıt taslağı hazırlandı.', 'blue', NULL, NULL, NULL, NULL, 'İletişim')
 ON CONFLICT (id) DO NOTHING;
+
+-- 6. COOPERATIVES (Kooperatif Bilgileri)
+DROP TABLE IF EXISTS cooperatives CASCADE;
+CREATE TABLE cooperatives (
+  id SERIAL PRIMARY KEY,
+  name TEXT,
+  description TEXT
+);
+ALTER TABLE cooperatives ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access" ON cooperatives FOR SELECT USING (true);
+
+INSERT INTO cooperatives (id, name, description) VALUES
+(1, 'Üreten Kadınlar Kooperatif', 'Yönetim Paneli')
+ON CONFLICT (id) DO NOTHING;
+
+-- 7. DASHBOARD STATS (Dünün Özeti vb.)
+DROP TABLE IF EXISTS dashboard_stats CASCADE;
+CREATE TABLE dashboard_stats (
+  id SERIAL PRIMARY KEY,
+  label TEXT,
+  value TEXT,
+  icon TEXT,
+  renk TEXT
+);
+ALTER TABLE dashboard_stats ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access" ON dashboard_stats FOR SELECT USING (true);
+
+INSERT INTO dashboard_stats (id, label, value, icon, renk) VALUES
+(1, 'Toplam Sipariş', '14', '📦', 'green'),
+(2, 'Teslim Edilen', '11', '✅', 'green'),
+(3, 'Bekleyen', '3', '⏳', 'gold'),
+(4, 'Toplam Gelir', '₺24.600', '💰', 'green'),
+(5, 'Yeni Üretici', '2', '👤', 'blue'),
+(6, 'Anomali Tespiti', '1', '⚠️', 'red')
+ON CONFLICT (id) DO NOTHING;
+
+-- 8. TASKS (Bugün Yapılacaklar)
+DROP TABLE IF EXISTS tasks CASCADE;
+CREATE TABLE tasks (
+  id SERIAL PRIMARY KEY,
+  is_name TEXT,
+  durum BOOLEAN,
+  oncelik TEXT
+);
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access" ON tasks FOR SELECT USING (true);
+
+INSERT INTO tasks (id, is_name, durum, oncelik) VALUES
+(1, 'Migros siparişi için domates temini', false, 'yuksek'),
+(2, 'Depo stok sayımı yapılacak', false, 'orta'),
+(3, 'Ayşe Demir ile fiyat görüşmesi', true, 'orta'),
+(4, 'Q2 finansal raporu tamamlanacak', false, 'yuksek'),
+(5, 'Organik Pazar sözleşmesi imzalanacak', false, 'dusuk')
+ON CONFLICT (id) DO NOTHING;
+
+-- 9. AI REPORTS (AI Analiz Özeti)
+DROP TABLE IF EXISTS ai_reports CASCADE;
+CREATE TABLE ai_reports (
+  id SERIAL PRIMARY KEY,
+  baslik TEXT,
+  maddeler JSONB
+);
+ALTER TABLE ai_reports ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access" ON ai_reports FOR SELECT USING (true);
+
+INSERT INTO ai_reports (id, baslik, maddeler) VALUES
+(1, 'AI Günlük Analiz Özeti — 10 Mayıs 2026', '["Depoda 3 ürün kritik stok seviyesinin altında. Öncelikli sipariş gerekiyor.", "Bugünkü 3 talep toplamda ₺8.200 değerinde. Tamamı zamanında karşılanabilir.", "Fatma Kaya bu ay en yüksek performanslı üretici olarak öne çıkıyor.", "Pazar eğilimi: Domates fiyatları bu haftadan itibaren %7 artış gösterebilir."]')
+ON CONFLICT (id) DO NOTHING;
+
+-- 10. STK ALERTS (STK İsraf Önleme)
+DROP TABLE IF EXISTS stk_alerts CASCADE;
+CREATE TABLE stk_alerts (
+  id SERIAL PRIMARY KEY,
+  urun TEXT,
+  emoji TEXT,
+  kalan_gun_mesaj TEXT,
+  miktar TEXT,
+  islem TEXT,
+  kardesler JSONB
+);
+ALTER TABLE stk_alerts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access" ON stk_alerts FOR SELECT USING (true);
+
+INSERT INTO stk_alerts (id, urun, emoji, kalan_gun_mesaj, miktar, islem, kardesler) VALUES
+(1, 'Domates', '🍅', '3 Gün Kaldı', '120 kg', 'Salça Üretimi', '[{"ad": "Bereket Salça Atölyesi", "avatar": "BS", "tip": "Kardeş Üretici"}]'),
+(2, 'İncir', '🟣', '2 Gün Kaldı', '45 kg', 'Reçel Üretimi', '[{"ad": "Tatlıcı Şirin Kooperatifi", "avatar": "TŞ", "tip": "Kardeş Üretici"}]')
+ON CONFLICT (id) DO NOTHING;
+
+-- 11. FINANCIAL STATS (Finansal Haftalık Rapor)
+DROP TABLE IF EXISTS financial_stats CASCADE;
+CREATE TABLE financial_stats (
+  id SERIAL PRIMARY KEY,
+  baslik TEXT,
+  deger TEXT,
+  trend TEXT,
+  yon TEXT,
+  icon TEXT
+);
+ALTER TABLE financial_stats ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access" ON financial_stats FOR SELECT USING (true);
+
+INSERT INTO financial_stats (id, baslik, deger, trend, yon, icon) VALUES
+(1, 'Toplam Gelir', '₺145,200', '+%12', 'up', 'dollar'),
+(2, 'Operasyonel Gider', '₺42,800', '-%4', 'down', 'pieChart'),
+(3, 'Kardeş Üretici İşlem Hacmi', '₺18,500', '+%35', 'up', 'users'),
+(4, 'İsraf Önleme Tasarrufu', '₺9,400', '+%8', 'up', 'zap')
+ON CONFLICT (id) DO NOTHING;
