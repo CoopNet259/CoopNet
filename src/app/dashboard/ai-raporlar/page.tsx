@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import './ai-raporlar.css';
-import { getAIReports } from '@/lib/api/client';
+import { getAIReports, postWeeklyInsight } from '@/lib/api/client';
 
 const Icon = ({ d, size = 18, extra = '' }: { d: string | string[]; size?: number; extra?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={extra}>
@@ -71,6 +71,22 @@ function bulletIcon(text: string): { d: string | string[]; cls: string } {
   return { d: icons.chevronR, cls: 'bi-grey' };
 }
 
+function getMondayOf(isoDate: string): string {
+  const d = new Date(isoDate + 'T12:00:00');
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().split('T')[0];
+}
+
+interface WeeklyInsight {
+  week_start: string; week_end: string;
+  stats: { total_orders: number; delivered_orders: number; delayed_orders: number; fulfillment_rate: number; critical_items: { name: string; current: number; unit: string }[] };
+  insight: string; highlights: string[];
+  recommended_actions: { tone: string; title: string; meta: string }[];
+  week_score: number;
+}
+
 function parseReportItems(value: unknown): string[] {
   if (Array.isArray(value)) return value as string[];
   if (typeof value === 'string') { try { return JSON.parse(value); } catch { return [value]; } }
@@ -96,6 +112,8 @@ export default function AIRaporlarPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [calYear, setCalYear]         = useState(2026);
   const [calMonth, setCalMonth]       = useState(5);
+  const [weeklyInsight, setWeeklyInsight] = useState<WeeklyInsight | null>(null);
+  const [weeklyLoading, setWeeklyLoading] = useState(false);
 
   useEffect(() => {
     getAIReports()
@@ -120,6 +138,17 @@ export default function AIRaporlarPage() {
       .catch(err => console.error('AI raporları çekilemedi:', err))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!selectedDate) return;
+    const monday = getMondayOf(selectedDate);
+    setWeeklyInsight(null);
+    setWeeklyLoading(true);
+    postWeeklyInsight(monday)
+      .then(data => setWeeklyInsight(data as WeeklyInsight))
+      .catch(() => setWeeklyInsight(null))
+      .finally(() => setWeeklyLoading(false));
+  }, [selectedDate]);
 
   const reportDateSet = useMemo(() => new Set(reports.map(r => r.isoDate).filter(Boolean)), [reports]);
   const selectedReport = useMemo(() => reports.find(r => r.isoDate === selectedDate) ?? null, [reports, selectedDate]);
@@ -309,6 +338,77 @@ export default function AIRaporlarPage() {
                     </div>
                   );
                 })()}
+
+                {/* Haftalık Rapor */}
+                <div className="arv-weekly">
+                  <div className="arv-weekly-header">
+                    <Icon d={icons.calendar} size={16} />
+                    <h3>Haftalık Özet</h3>
+                    {weeklyInsight && (
+                      <span className="arv-weekly-range">
+                        {weeklyInsight.week_start} – {weeklyInsight.week_end}
+                      </span>
+                    )}
+                  </div>
+
+                  {weeklyLoading && (
+                    <div className="arv-weekly-loading"><div className="arap-spinner" /><span>Haftalık analiz hazırlanıyor…</span></div>
+                  )}
+
+                  {!weeklyLoading && weeklyInsight && (
+                    <>
+                      {/* Skor + istatistikler */}
+                      <div className="arv-weekly-stats">
+                        <div className="arv-wscore">
+                          <div className="arv-wscore-ring" style={{ '--score': weeklyInsight.week_score } as React.CSSProperties}>
+                            <span>{weeklyInsight.week_score}</span>
+                            <small>/ 100</small>
+                          </div>
+                          <p>Haftalık Puan</p>
+                        </div>
+                        <div className="arv-wstat-grid">
+                          <div className="arv-wstat"><span>{weeklyInsight.stats.total_orders}</span><p>Toplam Sipariş</p></div>
+                          <div className="arv-wstat"><span>{weeklyInsight.stats.delivered_orders}</span><p>Teslim</p></div>
+                          <div className="arv-wstat"><span>%{weeklyInsight.stats.fulfillment_rate}</span><p>Karşılama</p></div>
+                          <div className="arv-wstat arv-wstat-warn"><span>{weeklyInsight.stats.critical_items?.length ?? 0}</span><p>Kritik Stok</p></div>
+                        </div>
+                      </div>
+
+                      {/* AI Özet */}
+                      {weeklyInsight.insight && (
+                        <p className="arv-weekly-insight">{weeklyInsight.insight}</p>
+                      )}
+
+                      {/* Öne çıkanlar */}
+                      {weeklyInsight.highlights?.length > 0 && (
+                        <div className="arv-weekly-highlights">
+                          {weeklyInsight.highlights.map((h, i) => (
+                            <div key={i} className="arv-weekly-hl">
+                              <Icon d={icons.chevronR} size={13} extra="arv-hl-icon" />
+                              <span>{h}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Aksiyon önerileri */}
+                      {weeklyInsight.recommended_actions?.length > 0 && (
+                        <div className="arv-weekly-actions">
+                          {weeklyInsight.recommended_actions.map((a, i) => (
+                            <div key={i} className={`arv-waction arv-waction-${a.tone}`}>
+                              <strong>{a.title}</strong>
+                              <span>{a.meta}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {!weeklyLoading && !weeklyInsight && (
+                    <p className="arv-weekly-empty">Haftalık analiz yüklenemedi.</p>
+                  )}
+                </div>
 
                 <div className="arv-footer">
                   <span className="arv-footer-tag">🤖 Gemini AI tarafından üretildi</span>

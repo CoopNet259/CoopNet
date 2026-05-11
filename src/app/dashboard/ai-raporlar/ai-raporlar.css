@@ -141,6 +141,43 @@
 .arv-insight-num { width: 24px; height: 24px; border-radius: 50%; background: var(--purple-100); color: var(--purple-500); font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
 .arv-insight-item p { margin: 0; font-size: 13.5px; color: var(--grey-700); line-height: 1.65; }
 
+/* ── Haftalık Rapor ── */
+.arv-weekly { background: #fff; border: 1px solid var(--grey-200); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 24px; }
+.arv-weekly-header { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--grey-100); background: var(--grey-50); }
+.arv-weekly-header svg { color: var(--green-600); }
+.arv-weekly-header h3 { margin: 0; font-size: 14px; font-weight: 700; color: var(--grey-800); flex: 1; }
+.arv-weekly-range { font-size: 11.5px; color: var(--grey-400); background: var(--grey-100); padding: 3px 10px; border-radius: 999px; }
+.arv-weekly-loading { display: flex; align-items: center; gap: 12px; padding: 20px; color: var(--grey-500); font-size: 13px; }
+.arv-weekly-empty { padding: 20px; color: var(--grey-400); font-size: 13px; margin: 0; }
+
+.arv-weekly-stats { display: flex; gap: 0; padding: 20px; border-bottom: 1px solid var(--grey-100); align-items: center; }
+.arv-wscore { display: flex; flex-direction: column; align-items: center; gap: 6px; padding-right: 24px; border-right: 1px solid var(--grey-100); margin-right: 24px; min-width: 80px; }
+.arv-wscore-ring { width: 64px; height: 64px; border-radius: 50%; background: conic-gradient(var(--green-500) calc(var(--score) * 1%), var(--grey-100) 0); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+.arv-wscore-ring::before { content: ''; position: absolute; inset: 6px; background: #fff; border-radius: 50%; }
+.arv-wscore-ring span { position: relative; z-index: 1; font-size: 16px; font-weight: 800; color: var(--green-700); line-height: 1; }
+.arv-wscore-ring small { position: relative; z-index: 1; font-size: 9px; color: var(--grey-400); }
+.arv-wscore p { font-size: 10.5px; font-weight: 600; color: var(--grey-500); margin: 0; text-align: center; }
+.arv-wstat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; flex: 1; }
+.arv-wstat { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.arv-wstat span { font-size: 20px; font-weight: 800; color: var(--grey-800); line-height: 1; }
+.arv-wstat p { font-size: 10.5px; color: var(--grey-500); margin: 0; text-align: center; }
+.arv-wstat-warn span { color: var(--red-500); }
+
+.arv-weekly-insight { margin: 0; padding: 16px 20px; font-size: 13.5px; color: var(--grey-700); line-height: 1.7; border-bottom: 1px solid var(--grey-100); }
+
+.arv-weekly-highlights { display: flex; flex-direction: column; gap: 0; border-bottom: 1px solid var(--grey-100); }
+.arv-weekly-hl { display: flex; align-items: flex-start; gap: 8px; padding: 10px 20px; font-size: 13px; color: var(--grey-700); line-height: 1.5; }
+.arv-weekly-hl:not(:last-child) { border-bottom: 1px solid var(--grey-50); }
+.arv-hl-icon { color: var(--green-500); flex-shrink: 0; margin-top: 2px; }
+
+.arv-weekly-actions { display: flex; flex-direction: column; gap: 8px; padding: 16px 20px; }
+.arv-waction { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border-radius: var(--radius-md); border-left: 3px solid; }
+.arv-waction strong { font-size: 13px; font-weight: 600; }
+.arv-waction span { font-size: 12px; opacity: 0.75; }
+.arv-waction-danger { background: var(--red-50); border-color: var(--red-500); color: #991b1b; }
+.arv-waction-warn   { background: var(--yellow-50); border-color: var(--yellow-500); color: #92400e; }
+.arv-waction-good   { background: #f0fdf4; border-color: var(--green-500); color: #166534; }
+
 /* Footer */
 .arv-footer { display: flex; gap: 10px; flex-wrap: wrap; }
 .arv-footer-tag { font-size: 11.5px; color: var(--grey-400); background: var(--grey-50); border: 1px solid var(--grey-200); border-radius: 999px; padding: 5px 12px; }
