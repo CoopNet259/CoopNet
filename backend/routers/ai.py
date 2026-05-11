@@ -453,3 +453,12 @@ Hasat bildirimleri ({len(harvests)} kayıt):
         msg = str(exc)
         is_rl = "429" in msg or "quota" in msg.lower()
         raise HTTPException(status_code=429 if is_rl else 500, detail="AI şu an yoğun, lütfen birkaç saniye bekleyip tekrar deneyin." if is_rl else "Haftalık özet oluşturulamadı.")
+
+
+# ── GET /api/ai/reports ───────────────────────────────────────
+
+@router.get("/reports")
+async def ai_reports():
+    sb = get_supabase()
+    res = sb.table("ai_reports").select("*").order("id", ascending=True).execute()
+    return res.data or []

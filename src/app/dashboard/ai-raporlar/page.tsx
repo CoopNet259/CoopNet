@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import './ai-raporlar.css';
+import { getAIReports } from '@/lib/api/client';
 
 const Icon = ({ d, size = 18, extra = '' }: { d: string | string[]; size?: number; extra?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={extra}>
@@ -69,11 +70,10 @@ export default function AIRaporlarPage() {
   }), [reports]);
 
   useEffect(() => {
-    fetch('/api/ai-reports')
-      .then(res => res.json())
+    getAIReports()
       .then(data => {
-        if (data && !data.error && Array.isArray(data)) {
-          const formatted = data.map((item: any) => ({
+        if (Array.isArray(data) && data.length > 0) {
+          const formatted = data.map((item) => ({
             id: item.id,
             baslik: item.baslik,
             maddeler: parseReportItems(item.maddeler),

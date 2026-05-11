@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import './anomali.css';
+import { getAnomalySummary } from '@/lib/api/client';
 
 const Icon = ({ d, size = 18, extra = '' }: { d: string | string[]; size?: number; extra?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={extra}>
@@ -228,18 +229,10 @@ export default function AnomaliPage() {
   }), [anomalies]);
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/products').then(res => res.json()).catch(() => []),
-      fetch('/api/requests').then(res => res.json()).catch(() => []),
-      fetch('/api/ai-logs').then(res => res.json()).catch(() => []),
-      fetch('/api/stk-alerts').then(res => res.json()).catch(() => []),
-    ]).then(([products, requests, aiLogs, stkAlerts]) => {
-      const productList = Array.isArray(products) ? products : [];
-      const requestList = Array.isArray(requests) ? requests : [];
-      const aiLogList = Array.isArray(aiLogs) ? aiLogs : [];
-      const stkAlertList = Array.isArray(stkAlerts) ? stkAlerts : [];
-      setAnomalies(detectAnomalies(productList, requestList, aiLogList, stkAlertList));
-    }).finally(() => setLoading(false));
+    getAnomalySummary()
+      .then(data => setAnomalies(data.anomalies as any))
+      .catch(err => console.error('Anomali verisi çekilemedi:', err))
+      .finally(() => setLoading(false));
   }, []);
 
   const navClick = (item: typeof navItems[0]) => {

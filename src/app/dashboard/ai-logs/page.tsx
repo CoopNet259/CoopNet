@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './ai-logs.css';
+import { getAILogs } from '@/lib/api/client';
 
 const Icon = ({ d, size = 18, extra = '' }: { d: string | string[]; size?: number; extra?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={extra}>
@@ -74,30 +75,24 @@ export default function AILogsPage() {
   const [aiActing, setAiActing] = useState<any[]>(initialAiActingData);
 
   useEffect(() => {
-    fetch('/api/ai-logs')
-      .then(res => res.json())
+    getAILogs()
       .then(data => {
-        if (data && !data.error && data.length > 0) {
-          const formatted = data
-            .filter((d: any) => d.detay_ne != null)
-            .map((item: any) => ({
-              id: item.id,
-              saat: item.zaman,
-              tarih: item.tarih,
-              baslik: item.baslik,
-              kategori: item.kategori || 'Genel',
-              detay_ne: item.detay_ne,
-              detay_neden: item.detay_neden,
-              detay_veri: item.detay_veri,
-              detay_etki: item.detay_etki
-            }));
-            
-          if (formatted.length > 0) {
-            setAiActing(formatted);
-          }
+        if (data.actions && data.actions.length > 0) {
+          const formatted = data.actions.map((item) => ({
+            id: item.id,
+            saat: item.time,
+            tarih: new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }),
+            baslik: item.title,
+            kategori: item.ctx?.join(' · ') || 'Genel',
+            detay_ne: item.title,
+            detay_neden: item.why,
+            detay_veri: `Güven skoru: %${item.confidence}. ${item.impact}`,
+            detay_etki: item.impact,
+          }));
+          setAiActing(formatted);
         }
       })
-      .catch(err => console.error("AI Logs çekilemedi:", err));
+      .catch(err => console.error('AI Logs çekilemedi:', err));
   }, []);
 
   const navClick = (item: typeof navItems[0]) => {

@@ -146,3 +146,44 @@ export const postWeeklyInsight = (week_start?: string) =>
     method: 'POST',
     body: JSON.stringify({ week_start }),
   });
+
+export interface ProducerItem {
+  id: number;
+  ad: string;
+  lokasyon: string;
+  urunler: string[];
+  kapasite: string;
+  karsilama?: string;
+  puan?: number;
+  avatar: string;
+  ihtiyac?: string;
+  type: 'talep' | 'kardes' | 'genel';
+}
+
+export interface AnomalyItem {
+  id: string;
+  title: string;
+  description: string;
+  severity: 'kritik' | 'yuksek' | 'orta' | 'bilgi';
+  category: string;
+  source: string;
+  recommendation: string;
+}
+
+export interface AIReportItem {
+  id: number;
+  baslik: string;
+  maddeler: string;
+}
+
+export const getProducers = () =>
+  api<ProducerItem[]>('/api/producers');
+
+export const getAnomalySummary = (date?: string) => {
+  const params = new URLSearchParams();
+  if (date) params.set('target_date', date);
+  return api<{ date: string; anomalies: AnomalyItem[] }>(`/api/anomaly/summary?${params}`);
+};
+
+export const getAIReports = () =>
+  api<AIReportItem[]>('/api/ai/reports');
