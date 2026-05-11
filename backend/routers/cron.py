@@ -227,7 +227,8 @@ async def generate_daily_report(
 ):
     _check_secret(request)
     sb = get_supabase()
-    target = date or date_type.today().isoformat()
+    from datetime import timedelta
+    target = date or (date_type.today() - timedelta(days=1)).isoformat()
     tr_date = _tr_date(target)
 
     # 1) Günlük satış özeti
