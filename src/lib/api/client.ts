@@ -193,3 +193,34 @@ export const getAnomalySummary = (date?: string) => {
 
 export const getAIReports = () =>
   api<AIReportItem[]>('/api/ai/reports');
+
+export interface WhatsAppDemoResult {
+  reply: string;
+  parsed: {
+    product_name: string;
+    quantity: number;
+    unit: string;
+    available_time: string | null;
+    confidence: number;
+  } | null;
+  stock_status: {
+    current_quantity: number;
+    unit: string;
+    is_critical: boolean;
+    fill_percentage: number;
+  } | null;
+  executed_actions: string[];
+  confidence_label: string;
+  confidence_warning: string | null;
+}
+
+export const postWhatsAppDemo = (message: string, profileName = 'Demo Üretici') => {
+  const form = new URLSearchParams();
+  form.set('Body', message);
+  form.set('ProfileName', profileName);
+  return api<WhatsAppDemoResult>('/api/webhook/whatsapp/demo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: form.toString(),
+  });
+};

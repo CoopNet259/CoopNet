@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import harvest, ai, dashboard, cron, producers, anomaly_router
+from routers import harvest, ai, dashboard, cron, producers, anomaly_router, whatsapp
 
 app = FastAPI(title="CoopNet API", version="1.0.0")
 
@@ -18,6 +18,7 @@ app.include_router(dashboard.router)
 app.include_router(cron.router)
 app.include_router(producers.router)
 app.include_router(anomaly_router.router)
+app.include_router(whatsapp.router)
 
 
 @app.get("/health")
