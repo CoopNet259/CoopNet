@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@supabase/supabase-js';
 import './dashboard.css';
 
 /* ── Icons ── */
@@ -28,6 +29,24 @@ const icons: Record<string, string | string[]> = {
   check:     'M20 6L9 17l-5-5',
   package:   ['M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z','M3.27 6.96L12 12.01l8.73-5.05','M12 22.08V12'],
 };
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
+
+const parseMaddeler = (raw: unknown): string[] => {
+  if (Array.isArray(raw)) return raw as string[];
+  if (!raw || typeof raw !== 'string') return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [raw];
+  } catch {
+    return [raw];
+  }
+};
+
+
 
 /* ── Sidebar nav items ── */
 const navItems = [
@@ -111,6 +130,11 @@ export default function DashboardPage() {
   const [aiOzetData, setAiOzetData] = useState(initialAiOzet);
 
   useEffect(() => {
+    const t = setTimeout(() => setBarsReady(true), 150);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
     fetch('/api/cooperatives').then(res => res.json()).then(data => {
       if (data && data.length > 0) setCoopName(data[0].name);
     }).catch(console.error);
@@ -133,7 +157,7 @@ export default function DashboardPage() {
       if (data && data.length > 0) {
         setAiOzetData({
           baslik: data[0].baslik,
-          maddeler: typeof data[0].maddeler === 'string' ? JSON.parse(data[0].maddeler) : (data[0].maddeler || [])
+          maddeler: parseMaddeler(data[0].maddeler),
         });
       }
     }).catch(console.error);
