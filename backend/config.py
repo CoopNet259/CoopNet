@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     next_public_supabase_anon_key: str
     cron_secret: str = ""
 
-    model_config = {"env_file": ".env", "case_sensitive": False}
+    model_config = {"env_file": ".env", "case_sensitive": False, "extra": "ignore"}
 
 
 settings = Settings()
