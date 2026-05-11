@@ -219,7 +219,7 @@ export default function AILogsPage() {
               <div className="panel-header acting-header">
                 <Icon d={icons.brain} size={18} />
                 <h3>AI Acting (Yapay Zeka Otonom İşlemleri)</h3>
-                <span className="panel-badge blue">Son 24 Saat: {aiActingData.length} İşlem</span>
+                <span className="panel-badge blue">Son 24 Saat: {aiActing.length} İşlem</span>
               </div>
               <div className="acting-list">
                 {aiActing.map(log => (
