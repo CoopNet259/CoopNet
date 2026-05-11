@@ -1,16 +1,27 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { postWhatsAppDemo, WhatsAppDemoResult, getHarvestMessages, HarvestMessagesResponse } from '@/lib/api/client';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import './uretici-mesaj.css';
+import {
+  postWhatsAppDemo,
+  WhatsAppDemoResult,
+  getHarvestMessages,
+  HarvestMessagesResponse,
+} from '@/lib/api/client';
 
-interface ChatMessage {
-  id: number;
-  from: 'producer' | 'system';
-  text: string;
+// ── Tipler ──────────────────────────────────────────────────────────────
+interface IncomingMessage {
+  id: string;
   time: string;
-  result?: WhatsAppDemoResult;
+  message: string;
+  impact: string;
+  source: string;
+  // demo'dan gelenlerde AI sonucu da ekleriz
+  analysisResult?: WhatsAppDemoResult;
 }
 
+// ── Sabitler ────────────────────────────────────────────────────────────
 const QUICK_MESSAGES = [
   '100 kg domates hasat ettim, öğleye kadar getiririm',
   '50 kg biber hazır, bugün teslim edebilirim',
@@ -20,508 +31,586 @@ const QUICK_MESSAGES = [
 ];
 
 const PRODUCERS = [
-  { name: 'Ahmet Yılmaz', avatar: 'AY', location: 'Çukurova, Adana' },
-  { name: 'Fatma Şahin', avatar: 'FŞ', location: 'Mut, Mersin' },
-  { name: 'Mehmet Demir', avatar: 'MD', location: 'Silifke, Mersin' },
+  { name: 'Ahmet Yılmaz', initials: 'AY', location: 'Çukurova' },
+  { name: 'Fatma Şahin', initials: 'FŞ', location: 'Mut' },
+  { name: 'Mehmet Demir', initials: 'MD', location: 'Silifke' },
 ];
 
-function fmt(date: Date) {
-  return date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+// ── İkonlar ─────────────────────────────────────────────────────────────
+const Icon = ({ d, size = 18, extra = '' }: { d: string | string[]; size?: number; extra?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={extra}>
+    {Array.isArray(d) ? d.map((p, i) => <path key={i} d={p} />) : <path d={d} />}
+  </svg>
+);
+
+const icons: Record<string, string | string[]> = {
+  grid:      'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z',
+  warehouse: ['M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z','M9 22V12h6v10'],
+  clipboard: ['M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2','M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z'],
+  users:     ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2','M23 21v-2a4 4 0 0 0-3-3.87','M16 3.13a4 4 0 0 1 0 7.75'],
+  dollar:    ['M12 1v22','M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'],
+  alert:     ['M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z','M12 9v4','M12 17h.01'],
+  brain:     ['M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z'],
+  log:       ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z','M14 2v6h6','M16 13H8','M16 17H8','M10 9H8'],
+  phone:     ['M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z'],
+  chevron:   'M9 18l6-6-6-6',
+  logout:    ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4','M16 17l5-5-5-5','M21 12H9'],
+  bell:      ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9','M13.73 21a2 2 0 0 1-3.46 0'],
+  send:      'M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z',
+  check:     'M20 6L9 17l-5-5',
+  refresh:   ['M23 4v6h-6','M1 20v-6h6','M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15'],
+  flask:     ['M9 3h6','M11 3v5l-3 7a3 3 0 0 0 2.83 4h2.34A3 3 0 0 0 16 15l-3-7V3'],
+  inbox:     ['M22 12h-6l-2 3h-4l-2-3H2','M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z'],
+};
+
+const navItems = [
+  { id: 'dashboard',      label: 'Ana Sayfa',         icon: 'grid',      path: '/dashboard' },
+  { id: 'depo',           label: 'Depo',              icon: 'warehouse', path: '/dashboard/depo' },
+  { id: 'talepler',       label: 'Talepler',          icon: 'clipboard', path: '/dashboard/talepler' },
+  { id: 'ureticiler',     label: 'Üreticiler',        icon: 'users',     path: '/dashboard/ureticiler' },
+  { id: 'finansal',       label: 'Finansal Raporlar', icon: 'dollar',    path: '/dashboard/finansal' },
+  { id: 'anomali',        label: 'Anomali',           icon: 'alert',     path: '/dashboard/anomali' },
+  { id: 'ai-raporlar',   label: 'AI Raporları',      icon: 'brain',     path: '/dashboard/ai-raporlar' },
+  { id: 'ai-logs',        label: 'AI Logs',           icon: 'log',       path: '/dashboard/ai-logs' },
+  { id: 'uretici-mesaj', label: 'Üretici Mesaj',     icon: 'phone',     path: '/dashboard/uretici-mesaj' },
+];
+
+// ── Yardımcı ─────────────────────────────────────────────────────────────
+function fmt(d: Date) {
+  return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+}
+function confClass(label: string) {
+  if (label === 'Yüksek') return 'high';
+  if (label === 'Orta') return 'mid';
+  return 'low';
+}
+function stockClass(pct: number, crit: boolean) {
+  if (crit) return 'crit';
+  if (pct < 30) return 'warn';
+  return 'ok';
+}
+function actionCount(impact: string) {
+  const m = impact.match(/(\d+)\s*otomatik/i);
+  return m ? parseInt(m[1]) : null;
 }
 
-function ConfidenceBadge({ label }: { label: string }) {
-  const colors: Record<string, string> = {
-    Yüksek: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-    Orta: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-    Düşük: 'bg-red-500/20 text-red-300 border-red-500/30',
-    Hata: 'bg-red-500/20 text-red-300 border-red-500/30',
-  };
-  return (
-    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${colors[label] ?? colors['Orta']}`}>
-      {label} Güven
-    </span>
-  );
-}
-
-function StockBar({ pct, critical }: { pct: number; critical: boolean }) {
-  const color = critical ? 'bg-red-500' : pct < 30 ? 'bg-amber-400' : 'bg-emerald-400';
-  return (
-    <div className="w-full bg-white/10 rounded-full h-2 mt-1">
-      <div
-        className={`h-2 rounded-full transition-all duration-700 ${color}`}
-        style={{ width: `${Math.min(pct, 100)}%` }}
-      />
-    </div>
-  );
-}
-
+// ── Sayfa ────────────────────────────────────────────────────────────────
 export default function UreticiMesajPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [selectedProducer, setSelectedProducer] = useState(PRODUCERS[0]);
-  const [activeTab, setActiveTab] = useState<'chat' | 'incoming' | 'info'>('chat');
-  const [incoming, setIncoming] = useState<HarvestMessagesResponse | null>(null);
-  const [incomingLoading, setIncomingLoading] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const idRef = useRef(0);
+  const router = useRouter();
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  // Feed state
+  const [feedData, setFeedData] = useState<HarvestMessagesResponse | null>(null);
+  const [feedLoading, setFeedLoading] = useState(true);
+  const [messages, setMessages] = useState<IncomingMessage[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // Gelen bildirimler sekmesi açıldığında ve her mesaj gönderilince yenile
-  const refreshIncoming = async () => {
-    setIncomingLoading(true);
+  // Demo/test paneli
+  const [showTest, setShowTest] = useState(false);
+  const [testProducer, setTestProducer] = useState(PRODUCERS[0]);
+  const [testInput, setTestInput] = useState('');
+  const [testLoading, setTestLoading] = useState(false);
+  const [testResult, setTestResult] = useState<string | null>(null);
+
+  const loadFeed = useCallback(async () => {
+    setFeedLoading(true);
     try {
-      const data = await getHarvestMessages(20);
-      setIncoming(data);
-    } catch { /* sessiz */ }
-    finally { setIncomingLoading(false); }
-  };
-
-  useEffect(() => {
-    if (activeTab === 'incoming') refreshIncoming();
-  }, [activeTab]);
-
-  async function sendMessage(text: string) {
-    if (!text.trim() || loading) return;
-    const userMsg: ChatMessage = {
-      id: ++idRef.current,
-      from: 'producer',
-      text: text.trim(),
-      time: fmt(new Date()),
-    };
-    setMessages(prev => [...prev, userMsg]);
-    setInput('');
-    setLoading(true);
-
-    try {
-      const result = await postWhatsAppDemo(text.trim(), selectedProducer.name);
-      const sysMsg: ChatMessage = {
-        id: ++idRef.current,
-        from: 'system',
-        text: result.reply,
-        time: fmt(new Date()),
-        result,
-      };
-      setMessages(prev => [...prev, sysMsg]);
+      const data = await getHarvestMessages(30);
+      setFeedData(data);
+      // Mesajları dönüştür — yeni gelenler üstte
+      const mapped: IncomingMessage[] = data.messages.map(m => ({
+        id: m.id,
+        time: m.time,
+        message: m.message,
+        impact: m.impact,
+        source: 'WhatsApp',
+      }));
+      setMessages(mapped);
     } catch {
-      setMessages(prev => [
-        ...prev,
-        {
-          id: ++idRef.current,
-          from: 'system',
-          text: 'Bir hata oluştu. Backend çalışıyor mu?',
-          time: fmt(new Date()),
-        },
-      ]);
+      // sessiz
     } finally {
-      setLoading(false);
-      refreshIncoming(); // gelen bildirimler panelini güncelle
+      setFeedLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadFeed(); }, [loadFeed]);
+
+  // Seçili mesaj
+  const selected = messages.find(m => m.id === selectedId) ?? null;
+
+  // Demo mesaj gönder
+  async function sendTest(text: string) {
+    if (!text.trim() || testLoading) return;
+    setTestLoading(true);
+    setTestResult(null);
+    try {
+      const result = await postWhatsAppDemo(text.trim(), testProducer.name);
+      setTestResult(`✅ Mesaj işlendi — ${result.executed_actions.length} aksiyon alındı.`);
+      setTestInput('');
+      // Feed'i yenile
+      await loadFeed();
+    } catch {
+      setTestResult('❌ Hata: Backend çalışıyor mu?');
+    } finally {
+      setTestLoading(false);
     }
   }
 
-  return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col">
-      {/* ── Başlık ── */}
-      <div className="border-b border-white/10 px-6 py-4 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-emerald-600 flex items-center justify-center text-sm font-bold">
-          📱
-        </div>
-        <div>
-          <h1 className="font-semibold text-base">Üretici Mesaj Sistemi</h1>
-          <p className="text-xs text-white/40">WhatsApp → AI → Otomatik Aksiyon Demo</p>
-        </div>
-        <div className="ml-auto flex items-center gap-2 text-xs text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-3 py-1.5 rounded-full">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          Canlı Demo
-        </div>
-      </div>
+  // İstatistikler
+  const totalMessages = messages.length;
+  const totalTasks = feedData?.tasks.length ?? 0;
+  const criticalTasks = feedData?.tasks.filter(t => t.priority === 'yuksek').length ?? 0;
+  const pendingTasks = feedData?.tasks.filter(t => !t.done).length ?? 0;
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* ── Sol: Telefon Simülatörü ── */}
-        <div className="flex flex-col flex-1 max-w-md mx-auto p-4 gap-3">
-          {/* Üretici Seçici */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-            <p className="text-[11px] text-white/40 mb-2 uppercase tracking-wider">Üretici olarak mesaj at</p>
-            <div className="flex gap-2">
-              {PRODUCERS.map(p => (
-                <button
-                  key={p.name}
-                  onClick={() => setSelectedProducer(p)}
-                  className={`flex-1 flex flex-col items-center gap-1 py-2 px-1 rounded-lg border transition-all text-xs ${
-                    selectedProducer.name === p.name
-                      ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
-                      : 'border-white/10 bg-white/5 text-white/50 hover:border-white/20'
-                  }`}
-                >
-                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center font-bold text-xs">
-                    {p.avatar}
-                  </div>
-                  <span className="truncate w-full text-center">{p.name.split(' ')[0]}</span>
-                </button>
-              ))}
+  return (
+    <div className="coopnet-root">
+      {/* ── Sidebar ── */}
+      <aside className="sidebar">
+        <div className="sidebar-logo">
+          <div className="logo-mark">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+              <circle cx="11" cy="11" r="8" fill="rgba(255,255,255,0.2)" />
+              <path d="M11 4c-2.8 0-5 2.2-5 5 0 2 1.1 3.7 2.8 4.6L11 18l2.2-4.4C14.9 12.7 16 11 16 9c0-2.8-2.2-5-5-5z" fill="#fff" opacity="0.9" />
+            </svg>
+          </div>
+          <div className="sidebar-logo-text">
+            <h1>CoopNet</h1>
+            <p>Kooperatif Yönetim</p>
+          </div>
+        </div>
+
+        <div className="coop-name-sidebar">
+          <span className="coop-name-icon">🌱</span>
+          <span className="coop-name-label">Üreten Kadınlar Kooperatif</span>
+        </div>
+
+        <nav>
+          {navItems.map(item => (
+            <div
+              key={item.id}
+              className={`nav-item${item.id === 'uretici-mesaj' ? ' active' : ''}`}
+              onClick={() => router.push(item.path)}
+            >
+              <Icon d={icons[item.icon]} size={17} />
+              <span className="nav-item-label">{item.label}</span>
+              {item.id === 'uretici-mesaj' && <Icon d={icons.chevron} size={14} />}
+            </div>
+          ))}
+        </nav>
+
+        <div className="sidebar-deco">
+          {['🌾', '🍅', '🌿', '🫑', '🍆'].map((e, i) => <span key={i}>{e}</span>)}
+        </div>
+
+        <div className="sidebar-footer">
+          <div className="user-chip">
+            <div className="avatar">ÜK</div>
+            <div className="user-chip-text">
+              <h4>Üreten Kadınlar</h4>
+              <p>Admin Paneli</p>
             </div>
           </div>
+          <button className="logout-btn" onClick={() => router.push('/login')}>
+            <Icon d={icons.logout} size={16} />
+          </button>
+        </div>
+      </aside>
 
-          {/* WhatsApp Ekranı */}
-          <div className="flex-1 flex flex-col bg-[#0d1117] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
-            {/* WA Header */}
-            <div className="bg-[#1f2c34] px-4 py-3 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-emerald-700 flex items-center justify-center font-bold text-sm">
-                🌾
-              </div>
+      {/* ── Ana Alan ── */}
+      <main className="main">
+        {/* Header */}
+        <header className="header">
+          <div className="header-title-block">
+            <span className="header-icon">📱</span>
+            <div>
+              <h1 className="header-title">Üretici Mesaj Yönetimi</h1>
+              <p className="header-sub">WhatsApp'tan gelen hasat bildirimlerini takip et ve yönet</p>
+            </div>
+          </div>
+          <div className="header-right">
+            <div className="wa-status-badge">
+              <span className="wa-dot" />
+              WhatsApp Aktif
+            </div>
+            <button
+              className={`test-btn${showTest ? ' active' : ''}`}
+              onClick={() => setShowTest(v => !v)}
+            >
+              <Icon d={icons.flask} size={14} />
+              Test Gönder
+            </button>
+            <button className="icon-btn">
+              <Icon d={icons.bell} size={18} />
+            </button>
+          </div>
+        </header>
+
+        {/* Stats */}
+        <div className="stats-bar">
+          <div className="stat-card">
+            <div className="stat-icon-wrap green">📨</div>
+            <div>
+              <div className="stat-label">Gelen Mesaj</div>
+              <div className="stat-value">{feedLoading ? '—' : totalMessages}</div>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon-wrap blue">✅</div>
+            <div>
+              <div className="stat-label">Oluşturulan Görev</div>
+              <div className="stat-value">{feedLoading ? '—' : totalTasks}</div>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon-wrap red">⚠️</div>
+            <div>
+              <div className="stat-label">Yüksek Öncelik</div>
+              <div className="stat-value">{feedLoading ? '—' : criticalTasks}</div>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon-wrap yellow">🕐</div>
+            <div>
+              <div className="stat-label">Bekleyen Görev</div>
+              <div className="stat-value">{feedLoading ? '—' : pendingTasks}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="content">
+          {/* ── Sol: Gelen mesaj akışı ── */}
+          <div className="feed-column">
+            <div className="feed-header">
               <div>
-                <p className="text-sm font-semibold text-white">CoopNet AI</p>
-                <p className="text-[11px] text-white/50">çevrimiçi</p>
+                <span className="feed-title">Gelen Bildirimler</span>
+                {!feedLoading && messages.length > 0 && (
+                  <span className="msg-count-badge" style={{ marginLeft: 8 }}>{messages.length}</span>
+                )}
               </div>
-              <div className="ml-auto text-white/40">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" />
-                </svg>
+              <div className="feed-actions">
+                <button className="refresh-btn" onClick={loadFeed} disabled={feedLoading}>
+                  <Icon d={icons.refresh} size={13} extra="inline-block" />
+                  {' '}{feedLoading ? 'Yükleniyor…' : 'Yenile'}
+                </button>
               </div>
             </div>
 
-            {/* Mesajlar */}
-            <div
-              className="flex-1 overflow-y-auto p-3 space-y-2"
-              style={{ background: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.02\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") #111b21' }}
-            >
-              {messages.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-full gap-3 py-8">
-                  <div className="text-4xl">🌾</div>
-                  <p className="text-white/30 text-sm text-center">
-                    Üretici olarak bir mesaj gönder<br />AI otomatik işleyecek
-                  </p>
+            <div className="feed-list">
+              {feedLoading && (
+                <div className="loading-dots"><span /><span /><span /></div>
+              )}
+
+              {!feedLoading && messages.length === 0 && (
+                <div className="feed-empty">
+                  <div className="feed-empty-icon">📭</div>
+                  <div className="feed-empty-title">Henüz mesaj yok</div>
+                  <div className="feed-empty-sub">
+                    Üreticiler WhatsApp'tan mesaj gönderdiğinde burada görünecek.<br />
+                    Test için üstteki "Test Gönder" butonunu kullanabilirsin.
+                  </div>
                 </div>
               )}
 
-              {messages.map(msg => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.from === 'producer' ? 'justify-end' : 'justify-start'}`}
-                >
+              {messages.map(msg => {
+                const count = actionCount(msg.impact);
+                const isCrit = msg.impact?.toLowerCase().includes('kritik');
+                return (
                   <div
-                    className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
-                      msg.from === 'producer'
-                        ? 'bg-[#005c4b] text-white rounded-tr-sm'
-                        : 'bg-[#1f2c34] text-white rounded-tl-sm'
-                    }`}
+                    key={msg.id}
+                    className={`msg-item${selectedId === msg.id ? ' selected' : ''}`}
+                    onClick={() => setSelectedId(msg.id === selectedId ? null : msg.id)}
                   >
-                    <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
-                    <p className="text-[10px] text-white/40 text-right mt-1">{msg.time}</p>
+                    <div className="msg-item-top">
+                      <div className="msg-source-avatar">📱</div>
+                      <div className="msg-item-body">
+                        <div className="msg-item-header">
+                          <span className="msg-source-name">WhatsApp Üreticisi</span>
+                          <span className="msg-time">{msg.time}</span>
+                        </div>
+                        <div className="msg-text-preview">"{msg.message}"</div>
+                      </div>
+                    </div>
+                    {(count !== null || msg.impact) && (
+                      <div className="msg-item-footer">
+                        {count !== null && (
+                          <span className={`action-badge${isCrit ? ' critical' : ''}`}>
+                            ⚡ {count} otomatik aksiyon
+                          </span>
+                        )}
+                        {isCrit && (
+                          <span className="action-badge critical">⚠️ Kritik stok</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── Sağ: Detay / Analiz ── */}
+          <div className="detail-column">
+            {!selected ? (
+              /* Boş durum + görev listesi */
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <div className="detail-empty">
+                  <div className="detail-empty-icon">👆</div>
+                  <div className="detail-empty-title">Mesaj seç</div>
+                  <div className="detail-empty-sub">
+                    Sol taraftan bir mesaja tıkla — AI'nın ne parse ettiğini, stok durumunu ve alınan aksiyonları gör.
                   </div>
                 </div>
-              ))}
 
-              {loading && (
-                <div className="flex justify-start">
-                  <div className="bg-[#1f2c34] rounded-2xl rounded-tl-sm px-4 py-3">
-                    <div className="flex gap-1 items-center">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                {/* Görev listesi — her zaman görünür */}
+                {feedData && feedData.tasks.length > 0 && (
+                  <div style={{ padding: '0 22px 22px' }}>
+                    <div className="tasks-section">
+                      <div className="tasks-header">
+                        <span className="tasks-title">Oluşturulan Görevler ({feedData.tasks.length})</span>
+                      </div>
+                      <div className="tasks-list">
+                        {feedData.tasks.map(t => (
+                          <div key={t.id} className={`task-row${t.priority === 'yuksek' ? ' urgent' : ''}`}>
+                            <div className={`task-check${t.done ? ' done' : ''}`}>
+                              {t.done && <Icon d={icons.check} size={10} extra="text-white" />}
+                            </div>
+                            <span className="task-name">{t.title}</span>
+                            <span className={`task-prio ${t.priority === 'yuksek' ? 'high' : t.priority === 'orta' ? 'med' : 'low'}`}>
+                              {t.priority === 'yuksek' ? 'Yüksek' : t.priority === 'orta' ? 'Orta' : 'Düşük'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
+                )}
+              </div>
+            ) : (
+              /* Mesaj detayı */
+              <>
+                <div className="detail-msg-header">
+                  <div className="detail-avatar">📱</div>
+                  <div>
+                    <div className="detail-source-name">WhatsApp Üreticisi</div>
+                    <div className="detail-source-meta">Twilio Sandbox · {selected.source}</div>
+                  </div>
+                  <div className="detail-time-badge">{selected.time}</div>
                 </div>
-              )}
-              <div ref={bottomRef} />
-            </div>
 
-            {/* Input */}
-            <div className="bg-[#1f2c34] p-2 flex items-center gap-2">
-              <input
-                className="flex-1 bg-[#2a3942] text-white text-sm rounded-full px-4 py-2.5 outline-none placeholder:text-white/30"
-                placeholder="Mesaj yaz..."
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && sendMessage(input)}
-                disabled={loading}
-              />
-              <button
-                onClick={() => sendMessage(input)}
-                disabled={loading || !input.trim()}
-                className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center disabled:opacity-40 hover:bg-emerald-500 transition-colors"
-              >
-                <svg className="w-5 h-5 text-white rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          {/* Hızlı Mesajlar */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-            <p className="text-[11px] text-white/40 mb-2 uppercase tracking-wider">Örnek mesajlar</p>
-            <div className="flex flex-col gap-1.5">
-              {QUICK_MESSAGES.map((msg, i) => (
-                <button
-                  key={i}
-                  onClick={() => sendMessage(msg)}
-                  disabled={loading}
-                  className="text-left text-xs text-white/60 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 rounded-lg px-3 py-2 transition-all disabled:opacity-40"
-                >
-                  💬 {msg}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Sağ: Analiz Paneli ── */}
-        <div className="w-80 border-l border-white/10 flex flex-col overflow-hidden">
-          <div className="px-4 py-3 border-b border-white/10 flex gap-2">
-            {([
-              { id: 'chat', label: '🤖 AI Analizi' },
-              { id: 'incoming', label: '📨 Gelen Mesajlar' },
-              { id: 'info', label: 'ℹ️ Nasıl Çalışır' },
-            ] as const).map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`text-xs px-3 py-1.5 rounded-lg transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-emerald-600 text-white'
-                    : 'text-white/40 hover:text-white'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {activeTab === 'chat' ? (
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.filter(m => m.from === 'system' && m.result).length === 0 ? (
-                <div className="flex flex-col items-center gap-3 py-12 text-center">
-                  <div className="text-3xl">🤖</div>
-                  <p className="text-white/30 text-sm">
-                    Sol taraftan bir mesaj gönder,<br />AI analizi burada görünecek
-                  </p>
+                <div className="detail-msg-bubble">
+                  <div className="detail-bubble-label">Gelen mesaj</div>
+                  <div className="detail-bubble">{selected.message}</div>
                 </div>
-              ) : (
-                messages
-                  .filter(m => m.from === 'system' && m.result)
-                  .slice(-1)
-                  .map(msg => {
-                    const r = msg.result!;
-                    return (
-                      <div key={msg.id} className="space-y-3">
-                        {/* Parsed */}
-                        {r.parsed && (
-                          <div className="bg-white/5 border border-white/10 rounded-xl p-3 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <p className="text-xs font-semibold text-white/60 uppercase tracking-wider">AI Parse</p>
-                              <ConfidenceBadge label={r.confidence_label} />
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="bg-white/5 rounded-lg p-2">
-                                <p className="text-[10px] text-white/40">Ürün</p>
-                                <p className="text-sm font-semibold capitalize">{r.parsed.product_name}</p>
+
+                <div className="detail-body">
+                  {/* Eğer demo'dan gelen ve analiz verisi varsa göster */}
+                  {selected.analysisResult ? (
+                    <>
+                      {selected.analysisResult.parsed && (
+                        <div className="analysis-section">
+                          <div className="analysis-section-header">
+                            <span className="analysis-section-title">AI Parse Sonucu</span>
+                            <span className={`conf-badge ${confClass(selected.analysisResult.confidence_label)}`}>
+                              {selected.analysisResult.confidence_label} Güven
+                            </span>
+                          </div>
+                          <div className="analysis-section-body">
+                            <div className="kv-grid">
+                              <div className="kv-item">
+                                <div className="kv-label">Ürün</div>
+                                <div className="kv-value">{selected.analysisResult.parsed.product_name}</div>
                               </div>
-                              <div className="bg-white/5 rounded-lg p-2">
-                                <p className="text-[10px] text-white/40">Miktar</p>
-                                <p className="text-sm font-semibold">{r.parsed.quantity} {r.parsed.unit}</p>
+                              <div className="kv-item">
+                                <div className="kv-label">Miktar</div>
+                                <div className="kv-value">{selected.analysisResult.parsed.quantity} {selected.analysisResult.parsed.unit}</div>
                               </div>
-                              {r.parsed.available_time && (
-                                <div className="col-span-2 bg-white/5 rounded-lg p-2">
-                                  <p className="text-[10px] text-white/40">Teslim Saati</p>
-                                  <p className="text-sm font-semibold">{r.parsed.available_time}</p>
+                              {selected.analysisResult.parsed.available_time && (
+                                <div className="kv-item full">
+                                  <div className="kv-label">Teslim Saati</div>
+                                  <div className="kv-value">{selected.analysisResult.parsed.available_time}</div>
                                 </div>
                               )}
                             </div>
                           </div>
-                        )}
+                        </div>
+                      )}
 
-                        {/* Stok */}
-                        {r.stock_status && (
-                          <div className={`border rounded-xl p-3 space-y-2 ${
-                            r.stock_status.is_critical
-                              ? 'bg-red-500/10 border-red-500/30'
-                              : 'bg-white/5 border-white/10'
-                          }`}>
-                            <p className="text-xs font-semibold text-white/60 uppercase tracking-wider">Stok Durumu</p>
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm">{r.stock_status.current_quantity} {r.stock_status.unit} mevcut</span>
-                              <span className={`text-xs font-bold ${
-                                r.stock_status.is_critical ? 'text-red-400' : 'text-emerald-400'
-                              }`}>
-                                %{Math.round(r.stock_status.fill_percentage)}
+                      {selected.analysisResult.stock_status && (
+                        <div className="analysis-section">
+                          <div className="analysis-section-header">
+                            <span className="analysis-section-title">Stok Durumu</span>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: selected.analysisResult.stock_status.is_critical ? 'var(--red-500)' : 'var(--green-600)' }}>
+                              %{Math.round(selected.analysisResult.stock_status.fill_percentage)} dolu
+                            </span>
+                          </div>
+                          <div className="analysis-section-body">
+                            <div className="stock-bar-row">
+                              <span style={{ fontSize: 13, color: 'var(--grey-700)' }}>
+                                {selected.analysisResult.stock_status.current_quantity} {selected.analysisResult.stock_status.unit} mevcut
                               </span>
                             </div>
-                            <StockBar pct={r.stock_status.fill_percentage} critical={r.stock_status.is_critical} />
-                            {r.stock_status.is_critical && (
-                              <p className="text-xs text-red-400">⚠️ Kritik stok — otomatik uyarı gönderildi</p>
+                            <div className="stock-bar-track">
+                              <div
+                                className={`stock-bar-fill ${stockClass(selected.analysisResult.stock_status.fill_percentage, selected.analysisResult.stock_status.is_critical)}`}
+                                style={{ width: `${Math.min(selected.analysisResult.stock_status.fill_percentage, 100)}%` }}
+                              />
+                            </div>
+                            {selected.analysisResult.stock_status.is_critical && (
+                              <div className="stock-critical-note">⚠️ Kritik stok — yöneticiye uyarı gönderildi</div>
                             )}
                           </div>
-                        )}
+                        </div>
+                      )}
 
-                        {/* Aksiyonlar */}
-                        {r.executed_actions.length > 0 && (
-                          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
-                            <p className="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-2">
-                              Otomatik Aksiyonlar
-                            </p>
-                            <div className="space-y-1.5">
-                              {r.executed_actions.map((a, i) => (
-                                <p key={i} className="text-xs text-white/80">{a}</p>
-                              ))}
+                      {selected.analysisResult.executed_actions.length > 0 && (
+                        <div className="actions-section">
+                          <div className="actions-header">
+                            <span className="actions-title">Otomatik Aksiyonlar</span>
+                            <span className="actions-count">{selected.analysisResult.executed_actions.length}</span>
+                          </div>
+                          <div className="actions-list">
+                            {selected.analysisResult.executed_actions.map((a, i) => (
+                              <div key={i} className="action-row">
+                                <span className="action-icon">✅</span>
+                                <span className="action-text">{a}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {selected.analysisResult.confidence_warning && (
+                        <div className="warn-row">
+                          <span className="warn-icon">ℹ️</span>
+                          <span className="warn-text">{selected.analysisResult.confidence_warning}</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    /* DB'den gelen eski mesaj — impact metni var ama detaylı analiz yok */
+                    <>
+                      {selected.impact && (
+                        <div className="actions-section">
+                          <div className="actions-header">
+                            <span className="actions-title">Alınan Aksiyonlar</span>
+                          </div>
+                          <div className="actions-list">
+                            <div className="action-row">
+                              <span className="action-icon">⚡</span>
+                              <span className="action-text">{selected.impact}</span>
                             </div>
                           </div>
-                        )}
+                        </div>
+                      )}
 
-                        {/* Uyarı */}
-                        {r.confidence_warning && (
-                          <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
-                            <p className="text-xs text-amber-300">{r.confidence_warning}</p>
-                          </div>
-                        )}
+                      <div style={{
+                        background: 'var(--grey-50)', border: '1px solid var(--grey-200)',
+                        borderRadius: 'var(--radius-md)', padding: '14px 16px',
+                        fontSize: 12.5, color: 'var(--grey-500)', lineHeight: 1.65
+                      }}>
+                        💡 Bu mesaj gerçek WhatsApp'tan alındı. Detaylı analiz verisi arşivde.<br />
+                        <strong>"Test Gönder"</strong> ile yeni bir mesaj gönderirsen tam AI analizi burada görünür.
                       </div>
-                    );
-                  })
-              )}
-            </div>
-          ) : activeTab === 'incoming' ? (
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-xs text-white/40 uppercase tracking-wider">WhatsApp'tan Gelen Bildirimler</p>
-                <button
-                  onClick={refreshIncoming}
-                  disabled={incomingLoading}
-                  className="text-[10px] text-emerald-400 hover:text-emerald-300 disabled:opacity-40"
-                >
-                  {incomingLoading ? '⟳ Yükleniyor...' : '↻ Yenile'}
-                </button>
-              </div>
+                    </>
+                  )}
 
-              {incomingLoading && !incoming && (
-                <div className="flex justify-center py-8">
-                  <div className="flex gap-1">
-                    {[0,1,2].map(i => (
-                      <span key={i} className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {incoming && incoming.messages.length === 0 && (
-                <div className="text-center py-8 text-white/30 text-sm">
-                  Henüz mesaj yok.<br />WhatsApp'tan bir mesaj gönder.
-                </div>
-              )}
-
-              {/* Gelen mesajlar */}
-              {incoming && incoming.messages.map(msg => (
-                <div key={msg.id} className="bg-white/5 border border-white/10 rounded-xl p-3 space-y-2">
-                  <div className="flex items-start gap-2">
-                    <div className="w-8 h-8 rounded-full bg-emerald-700 flex items-center justify-center text-sm flex-shrink-0">
-                      📱
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white font-medium">"{msg.message}"</p>
-                      <p className="text-[11px] text-white/40 mt-0.5">{msg.time}</p>
-                    </div>
-                  </div>
-                  {msg.impact && (
-                    <div className="ml-10 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-1.5">
-                      <p className="text-[11px] text-emerald-300">⚡ {msg.impact}</p>
+                  {/* İlgili görevler */}
+                  {feedData && feedData.tasks.length > 0 && (
+                    <div className="tasks-section">
+                      <div className="tasks-header">
+                        <span className="tasks-title">İlgili Görevler</span>
+                      </div>
+                      <div className="tasks-list">
+                        {feedData.tasks.slice(0, 5).map(t => (
+                          <div key={t.id} className={`task-row${t.priority === 'yuksek' ? ' urgent' : ''}`}>
+                            <div className={`task-check${t.done ? ' done' : ''}`}>
+                              {t.done && <Icon d={icons.check} size={10} extra="text-white" />}
+                            </div>
+                            <span className="task-name">{t.title}</span>
+                            <span className={`task-prio ${t.priority === 'yuksek' ? 'high' : t.priority === 'orta' ? 'med' : 'low'}`}>
+                              {t.priority === 'yuksek' ? 'Yüksek' : t.priority === 'orta' ? 'Orta' : 'Düşük'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
-              ))}
+              </>
+            )}
+          </div>
+        </div>
 
-              {/* Hasat görevleri */}
-              {incoming && incoming.tasks.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <p className="text-[11px] text-white/40 uppercase tracking-wider">Oluşturulan Görevler</p>
-                  {incoming.tasks.map(task => (
-                    <div key={task.id} className={`flex items-center gap-3 p-3 rounded-xl border ${
-                      task.done
-                        ? 'bg-white/5 border-white/10 opacity-50'
-                        : task.priority === 'yuksek'
-                        ? 'bg-red-500/10 border-red-500/20'
-                        : 'bg-white/5 border-white/10'
-                    }`}>
-                      <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
-                        task.done ? 'bg-emerald-500 border-emerald-500' : 'border-white/30'
-                      }`} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-white truncate">{task.title}</p>
-                        <p className="text-[10px] text-white/40">
-                          {task.priority === 'yuksek' ? '🔴 Yüksek' : task.priority === 'orta' ? '🟡 Orta' : '🟢 Düşük'} öncelik
-                        </p>
-                      </div>
-                    </div>
+        {/* ── Test Paneli (overlay — sağ altta) ── */}
+        {showTest && (
+          <div style={{ position: 'fixed', bottom: 24, right: 24, width: 400, zIndex: 200 }}>
+            <div className="test-panel">
+              <div className="test-panel-header">
+                <div>
+                  <div className="test-panel-title">
+                    🧪 Mesaj Simülatörü
+                  </div>
+                  <div className="test-panel-sub">Sistemi test etmek için demo mesaj gönder</div>
+                </div>
+                <button className="close-btn" onClick={() => setShowTest(false)}>✕</button>
+              </div>
+              <div className="test-panel-body">
+                {/* Üretici seç */}
+                <div className="test-producer-row">
+                  {PRODUCERS.map(p => (
+                    <button
+                      key={p.name}
+                      className={`test-producer-btn${testProducer.name === p.name ? ' sel' : ''}`}
+                      onClick={() => setTestProducer(p)}
+                    >
+                      <div className="test-prod-av">{p.initials}</div>
+                      <span className="test-prod-name">{p.name.split(' ')[0]}</span>
+                    </button>
                   ))}
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              <div className="space-y-3">
-                {[
-                  {
-                    step: '1',
-                    icon: '📱',
-                    title: 'Üretici mesaj atar',
-                    desc: 'WhatsApp\'tan "100 kg domates hasat ettim" gibi serbest metin mesajı gönderir.',
-                    color: 'bg-blue-500/10 border-blue-500/20',
-                  },
-                  {
-                    step: '2',
-                    icon: '🤖',
-                    title: 'AI mesajı parse eder',
-                    desc: 'Gemini AI ürün adı, miktar, birim ve teslim saatini çıkarır. Güven skoru hesaplar.',
-                    color: 'bg-purple-500/10 border-purple-500/20',
-                  },
-                  {
-                    step: '3',
-                    icon: '📊',
-                    title: 'Stok kontrolü',
-                    desc: 'Mevcut depo stoku sorgulanır, kritik eşiğe bakılır.',
-                    color: 'bg-emerald-500/10 border-emerald-500/20',
-                  },
-                  {
-                    step: '4',
-                    icon: '⚡',
-                    title: 'Otomatik aksiyonlar',
-                    desc: 'Depo görevi oluşturulur. Kritikse yöneticiye uyarı gönderilir. Tümü otomatik.',
-                    color: 'bg-amber-500/10 border-amber-500/20',
-                  },
-                  {
-                    step: '5',
-                    icon: '💬',
-                    title: 'WhatsApp yanıtı',
-                    desc: 'Üretici anında geri bildirim alır — ne yapıldığını görür.',
-                    color: 'bg-teal-500/10 border-teal-500/20',
-                  },
-                ].map(item => (
-                  <div key={item.step} className={`border rounded-xl p-3 ${item.color}`}>
-                    <div className="flex items-start gap-3">
-                      <div className="text-xl mt-0.5">{item.icon}</div>
-                      <div>
-                        <p className="text-sm font-semibold">{item.title}</p>
-                        <p className="text-xs text-white/50 mt-0.5">{item.desc}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
 
-                <div className="bg-white/5 border border-white/10 rounded-xl p-3 mt-2">
-                  <p className="text-xs font-semibold text-white/60 mb-1">Gerçek WhatsApp için</p>
-                  <p className="text-xs text-white/40">
-                    Twilio WhatsApp Sandbox → webhook URL:{' '}
-                    <code className="text-emerald-400 bg-emerald-400/10 px-1 py-0.5 rounded">
-                      /api/webhook/whatsapp
-                    </code>
-                  </p>
+                {/* Giriş */}
+                <div className="test-input-row">
+                  <input
+                    className="test-input"
+                    placeholder="Hasat mesajı yaz…"
+                    value={testInput}
+                    onChange={e => setTestInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && sendTest(testInput)}
+                    disabled={testLoading}
+                  />
+                  <button
+                    className="test-send-btn"
+                    onClick={() => sendTest(testInput)}
+                    disabled={testLoading || !testInput.trim()}
+                  >
+                    <Icon d={icons.send} size={14} />
+                    {testLoading ? 'İşleniyor…' : 'Gönder'}
+                  </button>
                 </div>
+
+                {/* Hızlı mesajlar */}
+                <div className="test-quick-list">
+                  {QUICK_MESSAGES.map((msg, i) => (
+                    <button
+                      key={i}
+                      className="test-quick-btn"
+                      onClick={() => sendTest(msg)}
+                      disabled={testLoading}
+                    >
+                      💬 {msg}
+                    </button>
+                  ))}
+                </div>
+
+                {testResult && (
+                  <div className="test-result">{testResult}</div>
+                )}
               </div>
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
