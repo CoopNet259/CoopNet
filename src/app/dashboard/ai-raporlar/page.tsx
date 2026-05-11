@@ -283,6 +283,33 @@ export default function AIRaporlarPage() {
                   })}
                 </div>
 
+                {/* AI Öngörüleri — rapordaki "Öneri:" maddeleri */}
+                {(() => {
+                  const oneriler = selectedReport.maddeler.filter(m => m.toLowerCase().startsWith('öneri'));
+                  const fallback = [
+                    'AI raporları sistemdeki en önemli değişiklikleri öne çıkarır.',
+                    'Her rapor, depo ve talep verileri baz alınarak üretilir.',
+                    'Aksiyon önerileri gerçek zamanlı verilere dayanır.',
+                  ];
+                  const items = oneriler.length > 0 ? oneriler : fallback;
+                  return (
+                    <div className="arv-insights">
+                      <div className="arv-insights-header">
+                        <Icon d={icons.bulb} size={16} />
+                        <h3>AI Öngörüleri</h3>
+                      </div>
+                      <div className="arv-insights-list">
+                        {items.map((item, idx) => (
+                          <div key={idx} className="arv-insight-item">
+                            <span className="arv-insight-num">{idx + 1}</span>
+                            <p>{item.replace(/^öneri:\s*/i, '')}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <div className="arv-footer">
                   <span className="arv-footer-tag">🤖 Gemini AI tarafından üretildi</span>
                   <span className="arv-footer-tag">📊 Gerçek operasyon verilerine dayalı</span>

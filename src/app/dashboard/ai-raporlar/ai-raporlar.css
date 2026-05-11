@@ -130,6 +130,17 @@
 .arv-bullet.bi-grey   { background: var(--grey-50);   border-color: var(--grey-100); }
 .arv-bullet.bi-grey   .arv-bullet-icon { background: var(--grey-100); color: var(--grey-500); }
 
+/* AI Öngörüleri */
+.arv-insights { background: #fff; border: 1px solid var(--grey-200); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 24px; }
+.arv-insights-header { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--grey-100); background: var(--grey-50); }
+.arv-insights-header svg { color: var(--purple-500); }
+.arv-insights-header h3 { margin: 0; font-size: 14px; font-weight: 700; color: var(--grey-800); }
+.arv-insights-list { display: flex; flex-direction: column; gap: 0; }
+.arv-insight-item { display: flex; align-items: flex-start; gap: 14px; padding: 14px 20px; border-bottom: 1px solid var(--grey-100); }
+.arv-insight-item:last-child { border-bottom: none; }
+.arv-insight-num { width: 24px; height: 24px; border-radius: 50%; background: var(--purple-100); color: var(--purple-500); font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+.arv-insight-item p { margin: 0; font-size: 13.5px; color: var(--grey-700); line-height: 1.65; }
+
 /* Footer */
 .arv-footer { display: flex; gap: 10px; flex-wrap: wrap; }
 .arv-footer-tag { font-size: 11.5px; color: var(--grey-400); background: var(--grey-50); border: 1px solid var(--grey-200); border-radius: 999px; padding: 5px 12px; }
