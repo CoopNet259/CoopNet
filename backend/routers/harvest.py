@@ -83,7 +83,11 @@ async def _parse_harvest(message: str) -> ParsedHarvest:
     )
     try:
         model = get_model(complex=False)
-        result = await asyncio.to_thread(model.generate_content, prompt)
+        # Twilio webhook 15s timeout'u var; Gemini düşünme moduna girerse aşabilir
+        result = await asyncio.wait_for(
+            asyncio.to_thread(model.generate_content, prompt),
+            timeout=9.0,
+        )
         try:
             text = result.text.strip()
         except Exception:
@@ -94,7 +98,7 @@ async def _parse_harvest(message: str) -> ParsedHarvest:
             text = m.group(0)
         return ParsedHarvest(**json.loads(text))
     except Exception as ai_err:
-        # Gemini kota doldu veya erişilemiyor — regex fallback
+        # Gemini kota doldu, timeout veya erişilemiyor — regex fallback
         fallback = _regex_parse(message)
         if fallback:
             return fallback
