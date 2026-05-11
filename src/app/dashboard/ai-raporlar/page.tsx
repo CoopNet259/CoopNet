@@ -285,34 +285,108 @@ export default function AIRaporlarPage() {
             )}
             {!loading && selectedReport && (
               <div className="arap-report-view">
-                <div className="arv-header">
-                  <div className="arv-header-left">
-                    <span className="arv-badge">AI Raporu</span>
-                    <h2 className="arv-title">{selectedReport.baslik}</h2>
-                  </div>
-                  <div className="arv-nav">
-                    <button className="arv-nav-btn" disabled={!prevReport} onClick={() => prevReport && setSelectedDate(prevReport)} title="Önceki gün">
-                      <Icon d={icons.chevronL} size={16} />
-                    </button>
-                    <button className="arv-nav-btn" disabled={!nextReport} onClick={() => nextReport && setSelectedDate(nextReport)} title="Sonraki gün">
-                      <Icon d={icons.chevronR} size={16} />
-                    </button>
-                  </div>
-                </div>
 
-                <div className="arv-bullets">
-                  {selectedReport.maddeler.map((item, idx) => {
-                    const { d, cls } = bulletIcon(item);
-                    return (
-                      <div key={idx} className={`arv-bullet ${cls}`}>
-                        <div className="arv-bullet-icon"><Icon d={d} size={15} /></div>
-                        <p>{item}</p>
+                {/* ÜST SATIR: günlük + haftalık yan yana */}
+                <div className="arv-two-col">
+
+                  {/* SOL: Günlük Rapor */}
+                  <div className="arv-card">
+                    <div className="arv-card-header">
+                      <div className="arv-header-left">
+                        <span className="arv-badge">Günlük Rapor</span>
+                        <h2 className="arv-title">{selectedReport.baslik}</h2>
                       </div>
-                    );
-                  })}
+                      <div className="arv-nav">
+                        <button className="arv-nav-btn" disabled={!prevReport} onClick={() => prevReport && setSelectedDate(prevReport)} title="Önceki gün">
+                          <Icon d={icons.chevronL} size={16} />
+                        </button>
+                        <button className="arv-nav-btn" disabled={!nextReport} onClick={() => nextReport && setSelectedDate(nextReport)} title="Sonraki gün">
+                          <Icon d={icons.chevronR} size={16} />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="arv-bullets">
+                      {selectedReport.maddeler.map((item, idx) => {
+                        const { d, cls } = bulletIcon(item);
+                        return (
+                          <div key={idx} className={`arv-bullet ${cls}`}>
+                            <div className="arv-bullet-icon"><Icon d={d} size={15} /></div>
+                            <p>{item}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* SAĞ: Haftalık Rapor */}
+                  <div className="arv-card">
+                    <div className="arv-card-header">
+                      <div className="arv-header-left">
+                        <span className="arv-badge arv-badge-green">Haftalık Rapor</span>
+                        <h2 className="arv-title">
+                          {weeklyInsight
+                            ? `${weeklyInsight.week_start.slice(5).replace('-','/')} – ${weeklyInsight.week_end.slice(5).replace('-','/')} Mayıs`
+                            : 'Haftalık Özet'}
+                        </h2>
+                      </div>
+                    </div>
+
+                    {weeklyLoading && (
+                      <div className="arv-weekly-loading"><div className="arap-spinner" /><span>Haftalık analiz hazırlanıyor…</span></div>
+                    )}
+
+                    {!weeklyLoading && weeklyInsight && (
+                      <>
+                        <div className="arv-weekly-stats">
+                          <div className="arv-wscore">
+                            <div className="arv-wscore-ring" style={{ '--score': weeklyInsight.week_score } as React.CSSProperties}>
+                              <span>{weeklyInsight.week_score}</span>
+                              <small>/ 100</small>
+                            </div>
+                            <p>Haftalık Puan</p>
+                          </div>
+                          <div className="arv-wstat-grid">
+                            <div className="arv-wstat"><span>{weeklyInsight.stats.total_orders}</span><p>Sipariş</p></div>
+                            <div className="arv-wstat"><span>{weeklyInsight.stats.delivered_orders}</span><p>Teslim</p></div>
+                            <div className="arv-wstat"><span>%{weeklyInsight.stats.fulfillment_rate}</span><p>Karşılama</p></div>
+                            <div className="arv-wstat arv-wstat-warn"><span>{weeklyInsight.stats.critical_items?.length ?? 0}</span><p>Kritik</p></div>
+                          </div>
+                        </div>
+                        {weeklyInsight.insight && <p className="arv-weekly-insight">{weeklyInsight.insight}</p>}
+                        {weeklyInsight.highlights?.length > 0 && (
+                          <div className="arv-weekly-highlights">
+                            {weeklyInsight.highlights.map((h, i) => (
+                              <div key={i} className="arv-weekly-hl">
+                                <Icon d={icons.chevronR} size={13} extra="arv-hl-icon" />
+                                <span>{h}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {weeklyInsight.recommended_actions?.length > 0 && (
+                          <div className="arv-weekly-actions">
+                            {weeklyInsight.recommended_actions.map((a, i) => (
+                              <div key={i} className={`arv-waction arv-waction-${a.tone}`}>
+                                <strong>{a.title}</strong>
+                                <span>{a.meta}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {!weeklyLoading && !weeklyInsight && (
+                      <div className="arv-weekly-empty-state">
+                        <Icon d={icons.calendar} size={32} extra="arv-empty-icon" />
+                        <p>Backend bağlantısı kurulamadı.</p>
+                        <span>Haftalık analiz için backend servisinin çalışır olması gerekir.</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* AI Öngörüleri — rapordaki "Öneri:" maddeleri */}
+                {/* ALT: AI Öngörüleri (tam genişlik) */}
                 {(() => {
                   const oneriler = selectedReport.maddeler.filter(m => m.toLowerCase().startsWith('öneri'));
                   const fallback = [
@@ -338,77 +412,6 @@ export default function AIRaporlarPage() {
                     </div>
                   );
                 })()}
-
-                {/* Haftalık Rapor */}
-                <div className="arv-weekly">
-                  <div className="arv-weekly-header">
-                    <Icon d={icons.calendar} size={16} />
-                    <h3>Haftalık Özet</h3>
-                    {weeklyInsight && (
-                      <span className="arv-weekly-range">
-                        {weeklyInsight.week_start} – {weeklyInsight.week_end}
-                      </span>
-                    )}
-                  </div>
-
-                  {weeklyLoading && (
-                    <div className="arv-weekly-loading"><div className="arap-spinner" /><span>Haftalık analiz hazırlanıyor…</span></div>
-                  )}
-
-                  {!weeklyLoading && weeklyInsight && (
-                    <>
-                      {/* Skor + istatistikler */}
-                      <div className="arv-weekly-stats">
-                        <div className="arv-wscore">
-                          <div className="arv-wscore-ring" style={{ '--score': weeklyInsight.week_score } as React.CSSProperties}>
-                            <span>{weeklyInsight.week_score}</span>
-                            <small>/ 100</small>
-                          </div>
-                          <p>Haftalık Puan</p>
-                        </div>
-                        <div className="arv-wstat-grid">
-                          <div className="arv-wstat"><span>{weeklyInsight.stats.total_orders}</span><p>Toplam Sipariş</p></div>
-                          <div className="arv-wstat"><span>{weeklyInsight.stats.delivered_orders}</span><p>Teslim</p></div>
-                          <div className="arv-wstat"><span>%{weeklyInsight.stats.fulfillment_rate}</span><p>Karşılama</p></div>
-                          <div className="arv-wstat arv-wstat-warn"><span>{weeklyInsight.stats.critical_items?.length ?? 0}</span><p>Kritik Stok</p></div>
-                        </div>
-                      </div>
-
-                      {/* AI Özet */}
-                      {weeklyInsight.insight && (
-                        <p className="arv-weekly-insight">{weeklyInsight.insight}</p>
-                      )}
-
-                      {/* Öne çıkanlar */}
-                      {weeklyInsight.highlights?.length > 0 && (
-                        <div className="arv-weekly-highlights">
-                          {weeklyInsight.highlights.map((h, i) => (
-                            <div key={i} className="arv-weekly-hl">
-                              <Icon d={icons.chevronR} size={13} extra="arv-hl-icon" />
-                              <span>{h}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Aksiyon önerileri */}
-                      {weeklyInsight.recommended_actions?.length > 0 && (
-                        <div className="arv-weekly-actions">
-                          {weeklyInsight.recommended_actions.map((a, i) => (
-                            <div key={i} className={`arv-waction arv-waction-${a.tone}`}>
-                              <strong>{a.title}</strong>
-                              <span>{a.meta}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-
-                  {!weeklyLoading && !weeklyInsight && (
-                    <p className="arv-weekly-empty">Haftalık analiz yüklenemedi.</p>
-                  )}
-                </div>
 
                 <div className="arv-footer">
                   <span className="arv-footer-tag">🤖 Gemini AI tarafından üretildi</span>
