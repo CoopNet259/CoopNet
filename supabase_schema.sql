@@ -2,7 +2,8 @@
 -- Bu dosyayı Supabase Dashboard -> SQL Editor alanına yapıştırıp "Run" (Çalıştır) diyerek tabloları oluşturabilirsiniz.
 
 -- 1. PRODUCTS (Stok / Depo)
-CREATE TABLE IF NOT EXISTS products (
+DROP TABLE IF EXISTS products CASCADE;
+CREATE TABLE products (
   id SERIAL PRIMARY KEY,
   emoji TEXT,
   ad TEXT,
@@ -28,7 +29,8 @@ INSERT INTO products (id, emoji, ad, mevcut_kg, kapasite_kg, kategori, son_gunce
 ON CONFLICT (id) DO NOTHING;
 
 -- 2. EMPLOYEES (Çalışanlar)
-CREATE TABLE IF NOT EXISTS employees (
+DROP TABLE IF EXISTS employees CASCADE;
+CREATE TABLE employees (
   id SERIAL PRIMARY KEY,
   ad TEXT,
   rol TEXT,
@@ -48,7 +50,8 @@ INSERT INTO employees (id, ad, rol, musait, vardiya, gorev) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- 3. PRODUCERS (Üreticiler)
-CREATE TABLE IF NOT EXISTS producers (
+DROP TABLE IF EXISTS producers CASCADE;
+CREATE TABLE producers (
   id SERIAL PRIMARY KEY,
   ad TEXT,
   lokasyon TEXT,
@@ -75,7 +78,8 @@ INSERT INTO producers (id, ad, lokasyon, urunler, kapasite, karsilama, puan, ava
 ON CONFLICT (id) DO NOTHING;
 
 -- 4. REQUESTS (Talepler)
-CREATE TABLE IF NOT EXISTS requests (
+DROP TABLE IF EXISTS requests CASCADE;
+CREATE TABLE requests (
   id SERIAL PRIMARY KEY,
   musteri TEXT,
   urun TEXT,
@@ -93,7 +97,8 @@ INSERT INTO requests (id, musteri, urun, miktar, saat, durum) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- 5. AI LOGS
-CREATE TABLE IF NOT EXISTS ai_logs (
+DROP TABLE IF EXISTS ai_logs CASCADE;
+CREATE TABLE ai_logs (
   id SERIAL PRIMARY KEY,
   zaman TEXT,
   tarih TEXT,
