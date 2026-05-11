@@ -13,55 +13,49 @@ export interface DailyContext {
 
 export async function buildDailyContext(date: string): Promise<DailyContext> {
   const supabase = createServerClient();
-  const start = `${date}T00:00:00`;
-  const end   = `${date}T23:59:59`;
 
-  const [ordersRes, inventoryRes, tasksRes, harvestsRes, anomalies] = await Promise.all([
-    supabase.from("orders").select("status").gte("created_at", start).lte("created_at", end),
-    supabase.from("inventory").select("current_quantity, unit, products(name, critical_stock_level)"),
-    supabase.from("tasks").select("status").gte("created_at", start).lte("created_at", end),
-    supabase
-      .from("producer_product_reports")
-      .select("quantity, unit, status, profiles(full_name), products(name)")
-      .gte("created_at", start)
-      .lte("created_at", end),
+  const [requestsRes, productsRes, tasksRes, anomalies] = await Promise.all([
+    supabase.from("requests").select("durum, miktar, urun"),
+    supabase.from("products").select("ad, mevcut_kg, kapasite_kg"),
+    supabase.from("tasks").select("is_name, durum"),
     computeDailyAnomalyInsights(date),
   ]);
 
-  const orders = ordersRes.data ?? [];
-  const inventory = inventoryRes.data ?? [];
+  const requests = requestsRes.data ?? [];
+  const products = productsRes.data ?? [];
   const tasks = tasksRes.data ?? [];
-  const harvests = harvestsRes.data ?? [];
+
+  const pending = requests.filter((o) => o.durum === "bekliyor").length;
+  const delivered = requests.filter((o) => o.durum === "teslim edildi").length;
+  const delayed = requests.filter((o) => o.durum === "gecikti" || o.durum === "gecikmiş").length;
+
+  const inventory = products.map((p) => {
+    const current = p.mevcut_kg ?? 0;
+    const capacity = p.kapasite_kg ?? 1;
+    const is_critical = current <= capacity * 0.25;
+    return {
+      name: p.ad ?? "",
+      quantity: current,
+      unit: "kg",
+      is_critical,
+    };
+  });
 
   return {
     date,
     orders: {
-      total:     orders.length,
-      pending:   orders.filter((o) => o.status === "pending").length,
-      delivered: orders.filter((o) => o.status === "delivered").length,
-      delayed:   orders.filter((o) => o.status === "delayed").length,
+      total: requests.length,
+      pending,
+      delivered,
+      delayed,
     },
-    inventory: inventory.map((i) => {
-      const p = (Array.isArray(i.products) ? i.products[0] : i.products) as unknown as { name: string; critical_stock_level: number };
-      return {
-        name:        p.name,
-        quantity:    i.current_quantity,
-        unit:        i.unit,
-        is_critical: i.current_quantity <= p.critical_stock_level,
-      };
-    }),
+    inventory,
     tasks: {
       total: tasks.length,
-      done:  tasks.filter((t) => t.status === "done").length,
-      todo:  tasks.filter((t) => t.status === "todo" || t.status === "in_progress").length,
+      done: tasks.filter((t) => t.durum === true).length,
+      todo: tasks.filter((t) => t.durum !== true).length,
     },
-    harvests: harvests.map((h) => ({
-      producer: ((Array.isArray(h.profiles) ? h.profiles[0] : h.profiles) as unknown as { full_name: string })?.full_name ?? "Bilinmeyen",
-      product:  ((Array.isArray(h.products) ? h.products[0] : h.products) as unknown as { name: string })?.name ?? "Bilinmeyen",
-      quantity: h.quantity,
-      unit:     h.unit,
-      status:   h.status,
-    })),
+    harvests: [],
     anomalies,
   };
 }

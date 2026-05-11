@@ -2,10 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/client";
 import { logAI } from "@/lib/ai/logger";
 
-// GET /api/cron/stock-check
-// Tüm ürünlerin stok seviyesini tarar.
-// Kritik eşikte olan her ürün için yöneticiye + depocuya otomatik bildirim gönderir.
-// Supabase pg_cron tarafından her sabah 08:00'de tetiklenir.
+// GET /api/cron/stock-check — products.mevcut_kg / kapasite_kg; bildirim → ai_logs
+
+function nowLogFields() {
+  const now = new Date();
+  return {
+    zaman: now.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }),
+    tarih: now.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }),
+  };
+}
+
 export async function GET(req: NextRequest) {
   const secret = req.headers.get("x-cron-secret");
 
@@ -15,16 +21,14 @@ export async function GET(req: NextRequest) {
 
   const supabase = createServerClient();
 
-  // 1. Tüm ürünleri ve stok bilgilerini çek
   const { data: products, error } = await supabase
     .from("products")
-    .select("id, name, unit, critical_stock_level");
+    .select("id, ad, emoji, mevcut_kg, kapasite_kg");
 
   if (error || !products) {
     return NextResponse.json({ error: "Ürünler alınamadı." }, { status: 500 });
   }
 
-  // 2. Her ürün için stok seviyesini kontrol et
   const criticalProducts: Array<{
     name: string;
     current_quantity: number;
@@ -33,32 +37,22 @@ export async function GET(req: NextRequest) {
     fill_percentage: number;
   }> = [];
 
-  for (const product of products) {
-    const { data: inv } = await supabase
-      .from("inventory")
-      .select("current_quantity")
-      .eq("product_id", product.id)
-      .single();
-
-    const current = inv?.current_quantity ?? 0;
-    const isCritical = current <= product.critical_stock_level;
-
-    if (isCritical) {
-      const fillPct = product.critical_stock_level > 0
-        ? Math.round((current / product.critical_stock_level) * 100)
-        : 0;
-
+  for (const p of products) {
+    const current = p.mevcut_kg ?? 0;
+    const capacity = p.kapasite_kg ?? 1;
+    const criticalLevel = capacity * 0.25;
+    if (current <= criticalLevel) {
+      const fillPct = criticalLevel > 0 ? Math.round((current / criticalLevel) * 100) : 0;
       criticalProducts.push({
-        name: product.name,
+        name: `${p.emoji ?? ""} ${p.ad ?? ""}`.trim(),
         current_quantity: current,
-        critical_level: product.critical_stock_level,
-        unit: product.unit,
+        critical_level: Math.round(criticalLevel),
+        unit: "kg",
         fill_percentage: fillPct,
       });
     }
   }
 
-  // 3. Kritik ürün yoksa bitir
   if (criticalProducts.length === 0) {
     await logAI({
       input_text: "cron:stock_check",
@@ -73,42 +67,36 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  // 4. Her kritik ürün için bildirim gönder
-  const notificationRows = criticalProducts.flatMap((p) => [
-    // Yöneticiye
+  const t = nowLogFields();
+  const logRows = criticalProducts.flatMap((cp) => [
     {
-      role: "manager",
-      title: `⚠️ Kritik Stok: ${p.name}`,
-      message: `${p.name} stoğu kritik seviyede. Mevcut: ${p.current_quantity} ${p.unit} (eşiğin %${p.fill_percentage}'i). Tedarikçi siparişi gerekli.`,
-      type: "warning",
-      is_read: false,
-      created_at: new Date().toISOString(),
+      ...t,
+      tip: "Uyarı",
+      baslik: `⚠️ Kritik Stok: ${cp.name}`,
+      mesaj: `${cp.name} stoğu kritik seviyede. Mevcut: ${cp.current_quantity} ${cp.unit} (doluluk %${cp.fill_percentage}). Tedarikçi siparişi gerekli.`,
+      kategori: "Depo",
+      renk: "red",
     },
-    // Depo sorumlusuna
     {
-      role: "warehouse",
-      title: `⚠️ Kritik Stok: ${p.name}`,
-      message: `${p.name} stoğu kritik seviyeye düştü. Mevcut: ${p.current_quantity} ${p.unit}. Stok sayımı yapın ve yöneticiye bildirin.`,
-      type: "warning",
-      is_read: false,
-      created_at: new Date().toISOString(),
+      ...t,
+      tip: "Uyarı",
+      baslik: `⚠️ Kritik Stok: ${cp.name}`,
+      mesaj: `${cp.name} stoğu kritik seviyeye düştü. Mevcut: ${cp.current_quantity} ${cp.unit}. Stok sayımı yapın ve yöneticiye bildirin.`,
+      kategori: "Depo",
+      renk: "gold",
     },
   ]);
 
-  const { error: notifError } = await supabase
-    .from("notifications")
-    .insert(notificationRows);
-
-  if (notifError) {
-    console.error("[STOCK_CHECK_NOTIF_ERROR]", notifError.message);
+  const { error: logError } = await supabase.from("ai_logs").insert(logRows);
+  if (logError) {
+    console.error("[STOCK_CHECK_AI_LOG_ERROR]", logError.message);
   }
 
-  // 5. Log ve yanıt
   const result = {
     checked: products.length,
     critical_count: criticalProducts.length,
     critical_products: criticalProducts,
-    notifications_sent: notifError ? 0 : notificationRows.length,
+    ai_logs_written: logError ? 0 : logRows.length,
     checked_at: new Date().toISOString(),
   };
 

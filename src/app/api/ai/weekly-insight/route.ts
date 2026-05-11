@@ -3,102 +3,66 @@ import { getModel } from "@/lib/ai/client";
 import { createServerClient } from "@/lib/supabase/client";
 import { logAI } from "@/lib/ai/logger";
 
-// POST /api/ai/weekly-insight
-// Body: { week_start?: string }  — YYYY-MM-DD, default: bu haftanın başı (Pazartesi)
-// AI Raporları sayfasındaki "Gidişata göre · kısa AI özeti" + "Önerilen aksiyonlar" bölümlerini besler.
-// Haftalık veriyi Supabase'den çekip Gemini ile analiz eder.
+// POST /api/ai/weekly-insight — requests + products (supabase_schema.sql)
+
+function parseMiktarKg(miktar: string | null): number {
+  if (!miktar) return 0;
+  const n = parseFloat(String(miktar).replace(/[^\d.,]/g, "").replace(",", "."));
+  return Number.isFinite(n) ? n : 0;
+}
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
-
-  // Haftanın başını hesapla (Pazartesi)
   const weekStart = body.week_start ?? getMonday();
-  const weekEnd   = addDays(weekStart, 7);
+  const weekEnd = addDays(weekStart, 7);
 
   const supabase = createServerClient();
 
   try {
-    // ── VERİ TOPLAMA ─────────────────────────────────────────
+    const { data: requests } = await supabase
+      .from("requests")
+      .select("durum, miktar, urun");
 
-    // 1. Haftalık sipariş istatistikleri
-    const { data: orders } = await supabase
-      .from("orders")
-      .select("status, quantity, products(name)")
-      .gte("created_at", `${weekStart}T00:00:00`)
-      .lt("created_at",  `${weekEnd}T00:00:00`);
+    const rows = requests ?? [];
+    const totalOrders = rows.length;
+    const deliveredOrders = rows.filter((o) => o.durum === "teslim edildi").length;
+    const delayedOrders = rows.filter((o) => o.durum === "gecikti" || o.durum === "gecikmiş").length;
+    const fulfillmentRate = totalOrders > 0 ? Math.round((deliveredOrders / totalOrders) * 100) : 0;
 
-    const totalOrders     = orders?.length ?? 0;
-    const deliveredOrders = orders?.filter((o) => o.status === "delivered").length ?? 0;
-    const delayedOrders   = orders?.filter((o) => o.status === "delayed").length   ?? 0;
-    const fulfillmentRate = totalOrders > 0
-      ? Math.round((deliveredOrders / totalOrders) * 100)
-      : 0;
-
-    // 2. Kritik stok durumu
     const { data: products } = await supabase
       .from("products")
-      .select("id, name, unit, critical_stock_level");
+      .select("ad, mevcut_kg, kapasite_kg");
 
     const criticalItems: Array<{ name: string; current: number; unit: string }> = [];
-
-    for (const product of products ?? []) {
-      const { data: inv } = await supabase
-        .from("inventory")
-        .select("current_quantity")
-        .eq("product_id", product.id)
-        .single();
-
-      const current = inv?.current_quantity ?? 0;
-      if (current <= product.critical_stock_level) {
-        criticalItems.push({ name: product.name, current, unit: product.unit });
+    for (const p of products ?? []) {
+      const current = p.mevcut_kg ?? 0;
+      const capacity = p.kapasite_kg ?? 1;
+      if (current <= capacity * 0.25) {
+        criticalItems.push({ name: p.ad ?? "", current, unit: "kg" });
       }
     }
 
-    // 3. Geçen haftayla talep karşılaştırması (trend)
-    const prevWeekStart = addDays(weekStart, -7);
-    const { data: prevOrders } = await supabase
-      .from("orders")
-      .select("quantity, product_id")
-      .gte("created_at", `${prevWeekStart}T00:00:00`)
-      .lt("created_at",  `${weekStart}T00:00:00`);
-
-    const thisTotal = orders?.reduce((s, o) => s + (o.quantity ?? 0), 0) ?? 0;
-    const prevTotal = prevOrders?.reduce((s, o) => s + (o.quantity ?? 0), 0) ?? 0;
-    const demandTrend = prevTotal > 0
-      ? Math.round(((thisTotal - prevTotal) / prevTotal) * 100)
-      : 0;
-
-    // 4. Hasat bildirimleri
-    const { data: harvests } = await supabase
-      .from("producer_product_reports")
-      .select("quantity, unit, status, products(name), profiles(full_name)")
-      .gte("created_at", `${weekStart}T00:00:00`)
-      .lt("created_at",  `${weekEnd}T00:00:00`);
-
-    // ── GEMİNİ PROMPT ────────────────────────────────────────
-    const model = getModel();
+    const thisTotal = rows.reduce((s, o) => s + parseMiktarKg(o.miktar), 0);
+    const demandTrend = 0;
 
     const contextText = `
 Hafta: ${weekStart} – ${weekEnd}
 
-Sipariş özeti:
-- Toplam: ${totalOrders}
+Talep / sipariş özeti (requests — anlık görünüm; şemada tarih kolonu yok):
+- Toplam kayıt: ${totalOrders}
 - Teslim edildi: ${deliveredOrders} (%${fulfillmentRate} karşılama)
 - Gecikmiş: ${delayedOrders}
-- Geçen haftaya göre talep değişimi: ${demandTrend >= 0 ? "+" : ""}${demandTrend}%
+- Talep hacmi (miktar alanından parse): ~${Math.round(thisTotal)} kg
 
 Kritik stok durumu (${criticalItems.length} ürün):
 ${criticalItems.length > 0
   ? criticalItems.map((i) => `- ${i.name}: ${i.current} ${i.unit} (kritik eşiğin altında)`).join("\n")
   : "- Kritik stok yok"}
 
-Hasat bildirimleri (${harvests?.length ?? 0} kayıt):
-${(harvests ?? []).slice(0, 5).map((h) => {
-  const producer = (h.profiles as unknown as { full_name: string })?.full_name ?? "Bilinmeyen";
-  const product  = (h.products as unknown as { name: string })?.name ?? "Bilinmeyen";
-  return `- ${producer}: ${h.quantity} ${h.unit} ${product} (${h.status})`;
-}).join("\n") || "- Kayıt yok"}
+Hasat bildirimleri: şemada ayrı hasat tablosu yok (boş kabul et).
 `.trim();
+
+    const model = getModel();
 
     const result = await model.generateContent({
       contents: [{ role: "user", parts: [{ text: contextText }] }],
@@ -125,20 +89,20 @@ Kurallar:
     const aiOutput = JSON.parse(result.response.text());
 
     const response = {
-      week_start:    weekStart,
-      week_end:      weekEnd,
+      week_start: weekStart,
+      week_end: weekEnd,
       stats: {
-        total_orders:     totalOrders,
+        total_orders: totalOrders,
         delivered_orders: deliveredOrders,
-        delayed_orders:   delayedOrders,
+        delayed_orders: delayedOrders,
         fulfillment_rate: fulfillmentRate,
         demand_trend_pct: demandTrend,
-        critical_items:   criticalItems,
+        critical_items: criticalItems,
       },
-      insight:              aiOutput.insight,
-      highlights:           aiOutput.highlights ?? [],
-      recommended_actions:  aiOutput.recommended_actions ?? [],
-      week_score:           aiOutput.week_score ?? null,
+      insight: aiOutput.insight,
+      highlights: aiOutput.highlights ?? [],
+      recommended_actions: aiOutput.recommended_actions ?? [],
+      week_score: aiOutput.week_score ?? null,
     };
 
     await logAI({
@@ -148,23 +112,24 @@ Kurallar:
     });
 
     return NextResponse.json(response);
-
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     const isRateLimit = msg.includes("429") || msg.toLowerCase().includes("quota");
     return NextResponse.json(
-      { error: isRateLimit ? "AI şu an yoğun, lütfen birkaç saniye bekleyip tekrar deneyin." : "Haftalık özet oluşturulamadı." },
+      {
+        error: isRateLimit
+          ? "AI şu an yoğun, lütfen birkaç saniye bekleyip tekrar deneyin."
+          : "Haftalık özet oluşturulamadı.",
+      },
       { status: isRateLimit ? 429 : 500 }
     );
   }
 }
 
-// ── YARDIMCI ─────────────────────────────────────────────────
-
 function getMonday(): string {
   const d = new Date();
-  const day = d.getDay(); // 0=Pazar
-  const diff = day === 0 ? -6 : 1 - day; // Pazartesi'ye çek
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
   return d.toISOString().split("T")[0];
 }

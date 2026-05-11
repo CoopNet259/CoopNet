@@ -228,3 +228,9 @@ INSERT INTO financial_stats (id, baslik, deger, trend, yon, icon) VALUES
 (3, 'Kardeş Üretici İşlem Hacmi', '₺18,500', '+%35', 'up', 'users'),
 (4, 'İsraf Önleme Tasarrufu', '₺9,400', '+%8', 'up', 'zap')
 ON CONFLICT (id) DO NOTHING;
+
+-- Uygulama (cron, AI araçları) için INSERT/UPDATE — prototip ortamı
+CREATE POLICY "Allow public insert ai_logs" ON ai_logs FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public insert tasks" ON tasks FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update tasks" ON tasks FOR UPDATE USING (true);
+CREATE POLICY "Allow public update products" ON products FOR UPDATE USING (true);

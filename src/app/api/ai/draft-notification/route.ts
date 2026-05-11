@@ -4,9 +4,8 @@ import { createServerClient } from "@/lib/supabase/client";
 import { logAI } from "@/lib/ai/logger";
 
 // POST /api/ai/draft-notification
-// Body: { order_id: string }
-// Gecikmiş veya sorunlu sipariş için müşteri bildirim taslağı üretir.
-// Temsilci taslağı görür, onaylar, sistem gönderir.
+// Body: { order_id: string } — requests tablosu (supabase_schema.sql)
+
 export async function POST(req: NextRequest) {
   const { order_id } = await req.json();
 
@@ -14,11 +13,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "order_id gerekli" }, { status: 400 });
   }
 
-  // Siparişi DB'den çek
   const supabase = createServerClient();
   const { data: order, error } = await supabase
-    .from("orders")
-    .select("customer_name, quantity, unit, status, created_at, products(name)")
+    .from("requests")
+    .select("musteri, urun, miktar, saat, durum")
     .eq("id", order_id)
     .single();
 
@@ -26,28 +24,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Sipariş bulunamadı" }, { status: 404 });
   }
 
-  const product = (Array.isArray(order.products) ? order.products[0] : order.products) as unknown as { name: string };
-
   try {
-  const model = getModel();
+    const model = getModel();
 
-  const result = await model.generateContent({
-    contents: [{
-      role: "user",
-      parts: [{
-        text: `Aşağıdaki sipariş için müşteriye bildirim taslağı yaz:
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `Aşağıdaki sipariş için müşteriye bildirim taslağı yaz:
 
-Müşteri: ${order.customer_name}
-Ürün: ${product.name}
-Miktar: ${order.quantity} ${order.unit}
-Durum: ${order.status}
-Sipariş tarihi: ${new Date(order.created_at).toLocaleDateString("tr-TR")}`,
-      }],
-    }],
-    generationConfig: {
-      responseMimeType: "application/json",
-    },
-    systemInstruction: `Sen CoopFlow AI'sın. Kooperatif müşteri temsilcisi adına müşteriye gönderilecek bildirim mesajı yaz.
+Müşteri: ${order.musteri ?? ""}
+Ürün: ${order.urun ?? ""}
+Miktar: ${order.miktar ?? ""}
+Durum: ${order.durum ?? ""}
+Saat: ${order.saat ?? ""}`,
+            },
+          ],
+        },
+      ],
+      generationConfig: {
+        responseMimeType: "application/json",
+      },
+      systemInstruction: `Sen CoopFlow AI'sın. Kooperatif müşteri temsilcisi adına müşteriye gönderilecek bildirim mesajı yaz.
 
 SADECE şu JSON formatında yanıt ver:
 {
@@ -56,29 +56,33 @@ SADECE şu JSON formatında yanıt ver:
   "channel": "in_app"
 }
 
-Durum değerlerine göre ton:
-- delayed: özür dile, yeni tahmini süre belirt (1-2 gün)
-- pending: siparişin alındığını onayla, hazırlık sürecinde olduğunu söyle
-- preparing: hazırlanıyor, yakında teslim
-- ready: teslimata hazır, bekliyor
+Durum değerlerine göre ton (Türkçe durumlar: bekliyor, onaylandi, teslim edildi, gecikti, gecikmiş):
+- gecikti / gecikmiş: özür dile, yeni tahmini süre belirt (1-2 gün)
+- bekliyor: siparişin alındığını onayla, hazırlık sürecinde olduğunu söyle
+- onaylandi: onaylandığını belirt, hazırlık / sevkiyat bilgisi
+- teslim edildi: teşekkür ve teslim özeti
 
 Kısa tut, samimi ol, Türkçe yaz.`,
-  });
+    });
 
-  const draft = JSON.parse(result.response.text());
+    const draft = JSON.parse(result.response.text());
 
-  await logAI({
-    input_text: `draft_notification: order_id=${order_id}`,
-    output_data: { order_id, order, draft },
-    action_type: "draft_notification",
-  });
+    await logAI({
+      input_text: `draft_notification: order_id=${order_id}`,
+      output_data: { order_id, order, draft },
+      action_type: "draft_notification",
+    });
 
-  return NextResponse.json(draft);
+    return NextResponse.json(draft);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     const isRateLimit = msg.includes("429") || msg.toLowerCase().includes("quota");
     return NextResponse.json(
-      { error: isRateLimit ? "AI şu an yoğun, lütfen birkaç saniye bekleyip tekrar deneyin." : "Bildirim taslağı oluşturulamadı." },
+      {
+        error: isRateLimit
+          ? "AI şu an yoğun, lütfen birkaç saniye bekleyip tekrar deneyin."
+          : "Bildirim taslağı oluşturulamadı.",
+      },
       { status: isRateLimit ? 429 : 500 }
     );
   }

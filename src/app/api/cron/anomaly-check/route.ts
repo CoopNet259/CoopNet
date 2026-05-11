@@ -2,20 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/client";
 import { logAI } from "@/lib/ai/logger";
 
-// ─────────────────────────────────────────────────────────────
-// GET /api/cron/anomaly-check
-// Her sabah 07:30'da Supabase pg_cron tarafından tetiklenir.
-// 4 anomali tipi tarar, bulduklarını notifications + ai_logs'a yazar.
-// CRON_SECRET header ile korunur.
-// ─────────────────────────────────────────────────────────────
+// GET /api/cron/anomaly-check — stk_alerts, products, requests; ai_logs'a yazar
 
 export interface Anomaly {
-  type: "demand_spike" | "delayed_surge" | "stock_burnrate" | "producer_silence";
+  type: "stk_risk" | "low_stock" | "delayed_snapshot";
   severity: "danger" | "warn" | "info";
   title: string;
   desc: string;
   source: string;
   meta?: Record<string, unknown>;
+}
+
+function nowLogFields() {
+  const now = new Date();
+  return {
+    zaman: now.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }),
+    tarih: now.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" }),
+  };
 }
 
 export async function GET(req: NextRequest) {
@@ -27,195 +30,68 @@ export async function GET(req: NextRequest) {
   const supabase = createServerClient();
   const anomalies: Anomaly[] = [];
 
-  // ── 1. TALEP ANOMALİSİ ──────────────────────────────────────
-  // Bu haftaki sipariş adedi geçen haftaya göre ürün bazında %30+ sapıyorsa anomali
-  {
-    const now = new Date();
-    const thisWeekStart = new Date(now);
-    thisWeekStart.setDate(now.getDate() - 7);
-    const lastWeekStart = new Date(now);
-    lastWeekStart.setDate(now.getDate() - 14);
+  const { data: stkRows } = await supabase
+    .from("stk_alerts")
+    .select("id, urun, emoji, kalan_gun_mesaj, miktar, islem, kardesler");
 
-    const { data: thisWeek } = await supabase
-      .from("orders")
-      .select("quantity, product_id, products(name)")
-      .gte("created_at", thisWeekStart.toISOString());
-
-    const { data: lastWeek } = await supabase
-      .from("orders")
-      .select("quantity, product_id, products(name)")
-      .gte("created_at", lastWeekStart.toISOString())
-      .lt("created_at", thisWeekStart.toISOString());
-
-    // Ürün bazında toplam miktar
-    const sumByProduct = (rows: typeof thisWeek) => {
-      const map: Record<string, { name: string; total: number }> = {};
-      for (const r of rows ?? []) {
-        const id = r.product_id as string;
-        const name = (r.products as unknown as { name: string })?.name ?? id;
-        if (!map[id]) map[id] = { name, total: 0 };
-        map[id].total += r.quantity ?? 0;
-      }
-      return map;
-    };
-
-    const thisMap = sumByProduct(thisWeek);
-    const lastMap = sumByProduct(lastWeek);
-
-    for (const [id, { name, total }] of Object.entries(thisMap)) {
-      const prev = lastMap[id]?.total ?? 0;
-      if (prev === 0) continue;
-      const changePct = Math.round(((total - prev) / prev) * 100);
-      if (Math.abs(changePct) >= 30) {
-        const up = changePct > 0;
-        anomalies.push({
-          type: "demand_spike",
-          severity: Math.abs(changePct) >= 50 ? "danger" : "warn",
-          title: `${name} talebinde ${up ? "+" : ""}${changePct}% sapma`,
-          desc: `${name} ürününün bu haftaki talebi geçen haftaya göre ${up ? "ani artış" : "belirgin düşüş"} gösteriyor. Geçen hafta: ${prev} kg — Bu hafta: ${total} kg.`,
-          source: "Talep modeli",
-          meta: { product_id: id, change_pct: changePct, this_week: total, last_week: prev },
-        });
-      }
-    }
+  for (const row of stkRows ?? []) {
+    anomalies.push({
+      type: "stk_risk",
+      severity: "warn",
+      title: `STK riski: ${row.urun ?? "?"}`,
+      desc: `${row.emoji ?? ""} ${row.urun ?? ""} — ${row.kalan_gun_mesaj ?? ""}. Önerilen işlem: ${row.islem ?? ""}.`,
+      source: "STK İzleme",
+      meta: { stk_alert_id: row.id },
+    });
   }
 
-  // ── 2. GECİKMİŞ SİPARİŞ PATLAMASI ──────────────────────────
-  // Bugünkü delayed oranı son 7 günlük ortalamanın 2 katına çıktıysa anomali
-  {
-    const today = new Date().toISOString().split("T")[0];
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-
-    const { data: todayOrders } = await supabase
-      .from("orders")
-      .select("status")
-      .gte("created_at", `${today}T00:00:00`);
-
-    const { data: weekOrders } = await supabase
-      .from("orders")
-      .select("status")
-      .gte("created_at", weekAgo.toISOString())
-      .lt("created_at", `${today}T00:00:00`);
-
-    const delayedRate = (orders: typeof todayOrders) => {
-      if (!orders || orders.length === 0) return 0;
-      return orders.filter((o) => o.status === "delayed").length / orders.length;
-    };
-
-    const todayRate = delayedRate(todayOrders);
-    const weekRate = delayedRate(weekOrders);
-
-    if (weekRate > 0 && todayRate >= weekRate * 2 && todayRate > 0.1) {
-      const todayPct = Math.round(todayRate * 100);
-      const weekPct = Math.round(weekRate * 100);
+  const { data: products } = await supabase.from("products").select("id, ad, emoji, mevcut_kg, kapasite_kg");
+  for (const p of products ?? []) {
+    const current = p.mevcut_kg ?? 0;
+    const capacity = p.kapasite_kg ?? 1;
+    const pct = capacity > 0 ? Math.round((current / capacity) * 100) : 100;
+    if (pct <= 20) {
+      const name = `${p.emoji ?? ""} ${p.ad ?? ""}`.trim();
       anomalies.push({
-        type: "delayed_surge",
-        severity: todayRate >= 0.3 ? "danger" : "warn",
-        title: `Gecikmiş sipariş oranı yükseldi: %${todayPct}`,
-        desc: `Bugünkü gecikme oranı (%${todayPct}), 7 günlük ortalamanın (%${weekPct}) 2 katına ulaştı. Operasyonel tıkanıklık veya kargo sorunu olabilir.`,
-        source: "Operasyon",
-        meta: { today_rate: todayRate, week_avg_rate: weekRate },
+        type: "low_stock",
+        severity: pct <= 10 ? "danger" : "warn",
+        title: `${name} stok seviyesi kritik`,
+        desc: `${name} depoda %${pct} dolulukta. Acil tedarik veya satış planı gerekebilir.`,
+        source: "Stok Analizi",
+        meta: { product_id: p.id, fill_pct: pct },
       });
     }
   }
 
-  // ── 3. STOK ERİME HIZI ──────────────────────────────────────
-  // Son 7 günlük tüketim önceki 7 güne göre %50+ artmışsa anomali
-  {
-    const now = new Date();
-    const d7 = new Date(now); d7.setDate(now.getDate() - 7);
-    const d14 = new Date(now); d14.setDate(now.getDate() - 14);
-
-    const { data: recentDelivered } = await supabase
-      .from("orders")
-      .select("quantity, product_id, products(name)")
-      .eq("status", "delivered")
-      .gte("created_at", d7.toISOString());
-
-    const { data: prevDelivered } = await supabase
-      .from("orders")
-      .select("quantity, product_id, products(name)")
-      .eq("status", "delivered")
-      .gte("created_at", d14.toISOString())
-      .lt("created_at", d7.toISOString());
-
-    const sumMap = (rows: typeof recentDelivered) => {
-      const map: Record<string, { name: string; total: number }> = {};
-      for (const r of rows ?? []) {
-        const id = r.product_id as string;
-        const name = (r.products as unknown as { name: string })?.name ?? id;
-        if (!map[id]) map[id] = { name, total: 0 };
-        map[id].total += r.quantity ?? 0;
-      }
-      return map;
-    };
-
-    const recentMap = sumMap(recentDelivered);
-    const prevMap = sumMap(prevDelivered);
-
-    for (const [id, { name, total }] of Object.entries(recentMap)) {
-      const prev = prevMap[id]?.total ?? 0;
-      if (prev === 0) continue;
-      const burnIncrease = Math.round(((total - prev) / prev) * 100);
-      if (burnIncrease >= 50) {
-        anomalies.push({
-          type: "stock_burnrate",
-          severity: burnIncrease >= 100 ? "danger" : "warn",
-          title: `${name} tüketim hızı +%${burnIncrease} arttı`,
-          desc: `${name} son 7 günde ${total} kg teslim edildi, önceki 7 güne (${prev} kg) kıyasla tüketim hızı belirgin biçimde yükseldi.`,
-          source: "Depo · Stok",
-          meta: { product_id: id, recent_7d: total, prev_7d: prev, increase_pct: burnIncrease },
-        });
-      }
+  const { data: reqs } = await supabase.from("requests").select("durum");
+  const rows = reqs ?? [];
+  if (rows.length > 0) {
+    const delayed = rows.filter((r) => r.durum === "gecikti" || r.durum === "gecikmiş").length;
+    const ratio = delayed / rows.length;
+    if (rows.length >= 2 && ratio >= 0.2) {
+      anomalies.push({
+        type: "delayed_snapshot",
+        severity: ratio >= 0.5 ? "danger" : "warn",
+        title: `Gecikmiş talep oranı yüksek: %${Math.round(ratio * 100)}`,
+        desc: `Aktif ${rows.length} talepten ${delayed} tanesi gecikmiş durumda. Operasyon ve kargo kontrol edilmeli.`,
+        source: "Operasyon",
+        meta: { total: rows.length, delayed },
+      });
     }
   }
 
-  // ── 4. ÜRETİCİ SESSİZLİĞİ ───────────────────────────────────
-  // 5+ gündür producer_product_reports tablosuna kayıt yapmamış üretici
-  {
-    const fiveDaysAgo = new Date();
-    fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
-
-    const { data: activeProducers } = await supabase
-      .from("profiles")
-      .select("id, full_name")
-      .eq("role", "producer");
-
-    for (const producer of activeProducers ?? []) {
-      const { data: recentReport } = await supabase
-        .from("producer_product_reports")
-        .select("id, created_at")
-        .eq("producer_id", producer.id)
-        .gte("created_at", fiveDaysAgo.toISOString())
-        .limit(1)
-        .single();
-
-      if (!recentReport) {
-        anomalies.push({
-          type: "producer_silence",
-          severity: "warn",
-          title: `Üretici sessizliği: ${producer.full_name}`,
-          desc: `${producer.full_name} 5 gündür hasat bildirimi yapmadı. İletişime geçilmesi önerilir.`,
-          source: "Üretici sinyali",
-          meta: { producer_id: producer.id },
-        });
-      }
-    }
-  }
-
-  // ── BİLDİRİM + LOG ──────────────────────────────────────────
   if (anomalies.length > 0) {
-    const notifRows = anomalies.map((a) => ({
-      role: "manager",
-      title: a.title,
-      message: a.desc,
-      type: a.severity === "danger" ? "error" : a.severity === "warn" ? "warning" : "info",
-      is_read: false,
-      created_at: new Date().toISOString(),
+    const t = nowLogFields();
+    const logRows = anomalies.map((a) => ({
+      ...t,
+      tip: a.severity === "danger" ? "Anomali" : "Uyarı",
+      baslik: a.title,
+      mesaj: a.desc.slice(0, 500),
+      kategori: "AI Tespiti",
+      renk: a.severity === "danger" ? "red" : "gold",
     }));
-
-    await supabase.from("notifications").insert(notifRows);
+    const { error: insErr } = await supabase.from("ai_logs").insert(logRows);
+    if (insErr) console.error("[ANOMALY_AI_LOG_ERROR]", insErr.message);
   }
 
   const result = {
