@@ -1,7 +1,15 @@
 from __future__ import annotations
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Literal
 from database import get_supabase
+
+_TR_MONTHS = [
+    "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+    "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık",
+]
+
+def _tr_date(dt: datetime) -> str:
+    return f"{dt.day:02d} {_TR_MONTHS[dt.month - 1]} {dt.year}"
 
 ActionType = Literal[
     "harvest_analyze", "chat", "daily_summary", "draft_email",
@@ -43,10 +51,10 @@ _BASLIK_MAP: dict[str, str] = {
 
 
 def log_ai(action_type: ActionType, input_text: str, output_data: Any) -> None:
-    now = datetime.now(timezone.utc)
+    now = datetime.now()
     record = {
         "zaman": now.strftime("%H:%M"),
-        "tarih": now.strftime("%d %B %Y"),
+        "tarih": _tr_date(now),
         "tip": _TIP_MAP.get(action_type, "Rapor"),
         "baslik": _BASLIK_MAP.get(action_type, action_type),
         "mesaj": input_text[:300] if input_text else "",

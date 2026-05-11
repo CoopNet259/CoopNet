@@ -63,6 +63,14 @@ function tierToAciliyet(tier: string) {
   return 'orta';
 }
 
+const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+                   'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+
+function parseTrDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return `${d} ${TR_MONTHS[m - 1]} ${y}`;
+}
+
 /* ═══════════════════════════════════════════════════ */
 
 export default function DashboardPage() {
@@ -122,7 +130,7 @@ export default function DashboardPage() {
     { label: 'Açık Görevler',    value: String(summary.kpis.open_tasks),      icon: '✅', renk: 'gold'  },
     { label: 'Hasat (haftalık)', value: `${summary.kpis.harvest_kg_week} kg`, icon: '🌾', renk: 'green' },
     { label: 'Talep Trendi',     value: `${summary.kpis.order_trend_pct > 0 ? '+' : ''}${summary.kpis.order_trend_pct}%`, icon: '📈', renk: summary.kpis.order_trend_pct >= 0 ? 'green' : 'red' },
-    { label: 'Tarih',            value: summary.date, icon: '📅', renk: 'blue' },
+    { label: 'Tarih',            value: parseTrDate(summary.date), icon: '📅', renk: 'blue' },
   ] : [];
 
   const ureticiler = [
@@ -196,7 +204,7 @@ export default function DashboardPage() {
             <span className="header-coop-icon">🌱</span>
             <div>
               <h2 className="header-coop-name">Üreten Kadınlar Kooperatif</h2>
-              <p className="header-coop-sub">Yönetim Paneli · {summary ? new Date(summary.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}</p>
+              <p className="header-coop-sub">Yönetim Paneli · {summary ? parseTrDate(summary.date) : '—'}</p>
             </div>
           </div>
 
@@ -362,7 +370,7 @@ export default function DashboardPage() {
             <div className="section-block-header">
               <span className="section-block-icon">📊</span>
               <h3>Güncel Durum</h3>
-              <span className="section-block-date">{summary?.date ?? '—'}</span>
+              <span className="section-block-date">{summary ? parseTrDate(summary.date) : '—'}</span>
             </div>
             {loading ? (
               <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Veriler yükleniyor…</div>
@@ -522,7 +530,7 @@ export default function DashboardPage() {
             <div className="ai-ozet-card">
               <div className="ai-ozet-baslik">
                 <span className="ai-chip">AI · Gemini</span>
-                <span className="ai-ozet-title">Günlük AI Analizi — {summary?.date ?? '—'}</span>
+                <span className="ai-ozet-title">Günlük AI Analizi — {summary ? parseTrDate(summary.date) : '—'}</span>
               </div>
               <ul className="ai-ozet-list">
                 {summary && summary.kpis.critical_stock > 0 && (
