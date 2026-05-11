@@ -24,6 +24,56 @@ Girdi: "Bugün 200 kg domates hazır, öğlene kadar getirebilirim"
 Çıktı: {"product_name":"domates","quantity":200,"unit":"kg","available_time":"12:00","confidence":0.95}"""
 
 
+_URUN_ALIASES: dict[str, str] = {
+    "domates": "domates", "biber": "biber", "patlıcan": "patlıcan",
+    "salatalık": "salatalık", "kayısı": "kayısı", "incir": "incir",
+    "havuç": "havuç", "soğan": "soğan", "mısır": "mısır", "üzüm": "üzüm",
+    "patates": "patates", "elma": "elma", "armut": "armut", "kiraz": "kiraz",
+    "erik": "erik", "çilek": "çilek", "limon": "limon", "portakal": "portakal",
+}
+
+
+def _regex_parse(message: str) -> ParsedHarvest | None:
+    """
+    Gemini API erişilemediğinde basit regex ile parse et.
+    '100 kg domates hasat ettim' gibi yapıları yakalar.
+    """
+    import re
+    msg = message.lower()
+
+    # Miktar + birim: "100 kg", "50adet", "3 kasa"
+    qty_m = re.search(r"(\d+(?:[.,]\d+)?)\s*(kg|adet|kasa|ton|gram|gr)", msg)
+    if not qty_m:
+        return None
+
+    quantity = float(qty_m.group(1).replace(",", "."))
+    unit = qty_m.group(2)
+
+    # Ürün adı
+    product_name = None
+    for alias in _URUN_ALIASES:
+        if alias in msg:
+            product_name = _URUN_ALIASES[alias]
+            break
+    if not product_name:
+        # Sayı + birimden sonra gelen kelime
+        after = msg[qty_m.end():].strip()
+        word_m = re.match(r"(\w+)", after)
+        product_name = word_m.group(1) if word_m else "bilinmeyen"
+
+    # Saat: "09:00", "saat 14", "öğleye kadar" vb.
+    time_m = re.search(r"(\d{1,2})[:\.](\d{2})", msg)
+    available_time = f"{int(time_m.group(1)):02d}:{time_m.group(2)}" if time_m else None
+
+    return ParsedHarvest(
+        product_name=product_name,
+        quantity=quantity,
+        unit=unit,
+        available_time=available_time,
+        confidence=0.80,  # regex parse — makul güven
+    )
+
+
 async def _parse_harvest(message: str) -> ParsedHarvest:
     import re
     prompt = (
@@ -31,20 +81,24 @@ async def _parse_harvest(message: str) -> ParsedHarvest:
         f"Mesaj: {message}\n\n"
         "Sadece JSON nesnesi döndür, başka hiçbir şey yazma."
     )
-    model = get_model(complex=False)
-    result = await asyncio.to_thread(model.generate_content, prompt)
-    # gemini-2.5-flash thinking mode: candidates üzerinden text al
     try:
-        text = result.text.strip()
-    except Exception:
-        # Thinking mode'da text doğrudan erişilemiyorsa parts'tan al
-        parts = result.candidates[0].content.parts
-        text = "".join(p.text for p in parts if hasattr(p, "text") and p.text).strip()
-    # Markdown kod bloğunu temizle
-    m = re.search(r"\{.*\}", text, re.DOTALL)
-    if m:
-        text = m.group(0)
-    return ParsedHarvest(**json.loads(text))
+        model = get_model(complex=False)
+        result = await asyncio.to_thread(model.generate_content, prompt)
+        try:
+            text = result.text.strip()
+        except Exception:
+            parts = result.candidates[0].content.parts
+            text = "".join(p.text for p in parts if hasattr(p, "text") and p.text).strip()
+        m = re.search(r"\{.*\}", text, re.DOTALL)
+        if m:
+            text = m.group(0)
+        return ParsedHarvest(**json.loads(text))
+    except Exception as ai_err:
+        # Gemini kota doldu veya erişilemiyor — regex fallback
+        fallback = _regex_parse(message)
+        if fallback:
+            return fallback
+        raise ai_err  # regex de başarısızsa orijinal hatayı fırlat
 
 
 def _resolve_confidence(confidence: float) -> dict:

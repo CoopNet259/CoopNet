@@ -123,7 +123,7 @@ async def whatsapp_webhook(
         response = {
             "parsed": parsed.model_dump(),
             "stock_status": stock_status.model_dump(),
-            "recommendation": agent_result["text"],
+            "recommendation": tr.get("recommendation", ""),
             "executed_actions": executed_actions,
             **conf,
         }
