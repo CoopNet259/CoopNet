@@ -37,7 +37,7 @@
 .nav-item.active{background:linear-gradient(90deg,rgba(56,153,106,0.35),rgba(56,153,106,0.12));color:#fff;border-left:3px solid var(--green-400);padding-left:15px;}
 .nav-item.active svg{color:var(--green-400);}
 .nav-item-label{flex:1;font-size:13px;font-weight:500;}
-.sidebar-deco{display:flex;flex-direction:column;gap:4px;padding:8px 0;align-items:center;opacity:0.2;font-size:18px;pointer-events:none;}
+.sidebar-deco{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;padding:8px 12px;opacity:0.2;font-size:14px;pointer-events:none;}
 .sidebar-footer{padding:10px 10px 14px;border-top:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;gap:8px;}
 .user-chip{flex:1;display:flex;align-items:center;gap:10px;padding:7px 10px;background:rgba(255,255,255,0.07);border-radius:var(--radius-md);cursor:pointer;transition:background 0.15s;}
 .user-chip:hover{background:rgba(255,255,255,0.12);}

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './ureticiler.css';
 
@@ -40,19 +40,19 @@ const navItems = [
   { id: 'ai-logs',     label: 'AI Logs',           icon: 'log',       path: '/dashboard/ai-logs' },
 ];
 
-const talebeGoreUreticiler = [
+const initialTalebeGoreUreticiler = [
   { id: 1, ad: 'Ahmet Yılmaz', lokasyon: 'Çukurova, Adana', urunler: ['Domates', 'Biber'], kapasite: '500 kg / Gün', karsilama: '%85', avatar: 'AY' },
   { id: 2, ad: 'Fatma Şahin', lokasyon: 'Mut, Mersin', urunler: ['Kayısı', 'Erik'], kapasite: '300 kg / Gün', karsilama: '%92', avatar: 'FŞ' },
 ];
 
-const genelUreticiler = [
+const initialGenelUreticiler = [
   { id: 3, ad: 'Mehmet Demir', lokasyon: 'Silifke, Mersin', urunler: ['Çilek', 'Limon'], kapasite: '150 kg / Gün', puan: '4.8', avatar: 'MD' },
   { id: 4, ad: 'Ayşe Kaya', lokasyon: 'Tarsus, Adana', urunler: ['Salatalık', 'Patlıcan'], kapasite: '250 kg / Gün', puan: '4.5', avatar: 'AK' },
   { id: 5, ad: 'Hasan Öztürk', lokasyon: 'Erdemli, Mersin', urunler: ['Muz', 'Domates'], kapasite: '400 kg / Gün', puan: '4.9', avatar: 'HÖ' },
   { id: 6, ad: 'Zeynep Çelik', lokasyon: 'Yüreğir, Adana', urunler: ['Soğan', 'Patates'], kapasite: '600 kg / Gün', puan: '4.6', avatar: 'ZÇ' },
 ];
 
-const kardesUreticiler = [
+const initialKardesUreticiler = [
   { id: 7, ad: 'Bereket Salça Atölyesi', lokasyon: 'Kozan, Adana', ihtiyac: 'Salçalık Domates & Biber', kapasite: '2 Ton / Hafta', avatar: 'BS' },
   { id: 8, ad: 'Tatlıcı Şirin Koop.', lokasyon: 'Mezitli, Mersin', ihtiyac: 'Reçellik Kayısı & İncir', kapasite: '500 kg / Hafta', avatar: 'TŞ' },
 ];
@@ -61,6 +61,43 @@ export default function UreticilerPage() {
   const router = useRouter();
   const [activeNav, setActiveNav] = useState('ureticiler');
   const [showNotif, setShowNotif] = useState(false);
+  const [talebeGoreUreticiler, setTalebeGoreUreticiler] = useState<any[]>(initialTalebeGoreUreticiler);
+  const [genelUreticiler, setGenelUreticiler] = useState<any[]>(initialGenelUreticiler);
+  const [kardesUreticiler, setKardesUreticiler] = useState<any[]>(initialKardesUreticiler);
+
+  useEffect(() => {
+    fetch('/api/producers')
+      .then(res => res.json())
+      .then(data => {
+        if (data && !data.error && data.length > 0) {
+          const talep: any[] = [];
+          const genel: any[] = [];
+          const kardes: any[] = [];
+          
+          data.forEach((p: any) => {
+            const mapped = {
+              id: p.id,
+              ad: p.ad,
+              lokasyon: p.lokasyon,
+              urunler: p.urunler || [],
+              kapasite: p.kapasite,
+              karsilama: p.karsilama,
+              puan: p.puan,
+              avatar: p.avatar,
+              ihtiyac: p.ihtiyac
+            };
+            if (p.type === 'talep') talep.push(mapped);
+            else if (p.type === 'kardes') kardes.push(mapped);
+            else genel.push(mapped);
+          });
+          
+          if (talep.length > 0) setTalebeGoreUreticiler(talep);
+          if (genel.length > 0) setGenelUreticiler(genel);
+          if (kardes.length > 0) setKardesUreticiler(kardes);
+        }
+      })
+      .catch(err => console.error("Üreticiler çekilemedi:", err));
+  }, []);
 
   const navClick = (item: typeof navItems[0]) => {
     setActiveNav(item.id);
