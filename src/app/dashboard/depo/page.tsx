@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './depo.css';
 
@@ -47,7 +47,7 @@ interface StokUrun {
   kategori: string; sonGuncelleme: string;
 }
 
-const stokVerisi: StokUrun[] = [
+const initialStokVerisi: StokUrun[] = [
   { id: 1, emoji: '🍅', ad: 'Domates', mevcutKg: 80, kapasiteKg: 500, kategori: 'Sebze', sonGuncelleme: 'Bugün 08:30' },
   { id: 2, emoji: '🫑', ad: 'Biber', mevcutKg: 55, kapasiteKg: 300, kategori: 'Sebze', sonGuncelleme: 'Bugün 09:00' },
   { id: 3, emoji: '🍑', ad: 'Kayısı', mevcutKg: 18, kapasiteKg: 200, kategori: 'Meyve', sonGuncelleme: 'Dün 17:00' },
@@ -103,6 +103,27 @@ export default function DepoPage() {
   const [activeNav, setActiveNav] = useState('depo');
   const [showNotif, setShowNotif] = useState(false);
   const [filtre, setFiltre] = useState<'hepsi' | 'kritik' | 'normal'>('hepsi');
+  const [stokVerisi, setStokVerisi] = useState<StokUrun[]>(initialStokVerisi);
+
+  useEffect(() => {
+    fetch('/api/products')
+      .then(res => res.json())
+      .then(data => {
+        if (data && !data.error && data.length > 0) {
+          const formatted = data.map((item: any) => ({
+            id: item.id,
+            emoji: item.emoji,
+            ad: item.ad,
+            mevcutKg: item.mevcut_kg,
+            kapasiteKg: item.kapasite_kg,
+            kategori: item.kategori,
+            sonGuncelleme: item.son_guncelleme
+          }));
+          setStokVerisi(formatted);
+        }
+      })
+      .catch(err => console.error("Stok verisi çekilemedi:", err));
+  }, []);
 
   const navClick = (item: typeof navItems[0]) => {
     setActiveNav(item.id);

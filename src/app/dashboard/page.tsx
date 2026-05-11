@@ -42,7 +42,7 @@ const navItems = [
 ];
 
 /* ── Mock data ── */
-const depoUyariler = [
+const initialDepoUyariler = [
   { id: 1, urun: 'Domates', stok: '12 kg', esik: '50 kg', aciliyet: 'kritik', emoji: '🍅' },
   { id: 2, urun: 'Biber',   stok: '28 kg', esik: '60 kg', aciliyet: 'yuksek', emoji: '🫑' },
   { id: 3, urun: 'Patlıcan',stok: '35 kg', esik: '40 kg', aciliyet: 'orta',   emoji: '🍆' },
@@ -102,6 +102,37 @@ export default function DashboardPage() {
   const [showNotif, setShowNotif] = useState(false);
   const [isler, setIsler] = useState(bugunIsler);
   const [barsReady, setBarsReady] = useState(false);
+  const [depoUyariler, setDepoUyariler] = useState(initialDepoUyariler);
+
+  useEffect(() => {
+    fetch('/api/products')
+      .then(res => res.json())
+      .then(data => {
+        if (data && !data.error && data.length > 0) {
+          const uyarilar = data
+            .map((item: any) => {
+              const pct = (item.mevcut_kg / item.kapasite_kg) * 100;
+              let aciliyet = 'iyi';
+              if (pct <= 25) aciliyet = 'kritik';
+              else if (pct <= 40) aciliyet = 'yuksek';
+              else if (pct <= 65) aciliyet = 'orta';
+              
+              return {
+                id: item.id,
+                urun: item.ad,
+                stok: item.mevcut_kg + ' kg',
+                esik: Math.round(item.kapasite_kg * 0.25) + ' kg', // Örnek eşik
+                aciliyet,
+                emoji: item.emoji
+              };
+            })
+            .filter((item: any) => item.aciliyet === 'kritik' || item.aciliyet === 'yuksek');
+          
+          if (uyarilar.length > 0) setDepoUyariler(uyarilar);
+        }
+      })
+      .catch(err => console.error("Stok verisi çekilemedi:", err));
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => setBarsReady(true), 150);
