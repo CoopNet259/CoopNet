@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './ureticiler.css';
+import { getProducers } from '@/lib/api/client';
 
 const Icon = ({ d, size = 18, extra = '' }: { d: string | string[]; size?: number; extra?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={extra}>
@@ -66,37 +67,23 @@ export default function UreticilerPage() {
   const [kardesUreticiler, setKardesUreticiler] = useState<any[]>(initialKardesUreticiler);
 
   useEffect(() => {
-    fetch('/api/producers')
-      .then(res => res.json())
+    getProducers()
       .then(data => {
-        if (data && !data.error && data.length > 0) {
+        if (data && data.length > 0) {
           const talep: any[] = [];
           const genel: any[] = [];
           const kardes: any[] = [];
-          
-          data.forEach((p: any) => {
-            const mapped = {
-              id: p.id,
-              ad: p.ad,
-              lokasyon: p.lokasyon,
-              urunler: p.urunler || [],
-              kapasite: p.kapasite,
-              karsilama: p.karsilama,
-              puan: p.puan,
-              avatar: p.avatar,
-              ihtiyac: p.ihtiyac
-            };
-            if (p.type === 'talep') talep.push(mapped);
-            else if (p.type === 'kardes') kardes.push(mapped);
-            else genel.push(mapped);
+          data.forEach((p) => {
+            if (p.type === 'talep') talep.push(p);
+            else if (p.type === 'kardes') kardes.push(p);
+            else genel.push(p);
           });
-          
           if (talep.length > 0) setTalebeGoreUreticiler(talep);
           if (genel.length > 0) setGenelUreticiler(genel);
           if (kardes.length > 0) setKardesUreticiler(kardes);
         }
       })
-      .catch(err => console.error("Üreticiler çekilemedi:", err));
+      .catch(err => console.error('Üreticiler çekilemedi:', err));
   }, []);
 
   const navClick = (item: typeof navItems[0]) => {
