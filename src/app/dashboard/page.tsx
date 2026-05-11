@@ -48,7 +48,7 @@ const initialDepoUyariler = [
   { id: 3, urun: 'Patlıcan',stok: '35 kg', esik: '40 kg', aciliyet: 'orta',   emoji: '🍆' },
 ];
 
-const bugunTalepler = [
+const initialBugunTalepler = [
   { id: 1, musteri: 'Migros Market',      urun: 'Domates',  miktar: '200 kg', saat: '09:00', durum: 'bekliyor' },
   { id: 2, musteri: 'Tarım Kooperatifi',  urun: 'Biber',    miktar: '80 kg',  saat: '11:30', durum: 'onaylandi' },
   { id: 3, musteri: 'Organik Pazar',      urun: 'Patlıcan', miktar: '60 kg',  saat: '14:00', durum: 'bekliyor' },
@@ -103,6 +103,18 @@ export default function DashboardPage() {
   const [isler, setIsler] = useState(bugunIsler);
   const [barsReady, setBarsReady] = useState(false);
   const [depoUyariler, setDepoUyariler] = useState(initialDepoUyariler);
+  const [bugunTalepler, setBugunTalepler] = useState(initialBugunTalepler);
+
+  useEffect(() => {
+    fetch('/api/requests')
+      .then(res => res.json())
+      .then(data => {
+        if (data && !data.error && data.length > 0) {
+          setBugunTalepler(data);
+        }
+      })
+      .catch(err => console.error("Talepler çekilemedi:", err));
+  }, []);
 
   useEffect(() => {
     fetch('/api/products')

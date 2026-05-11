@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './ai-logs.css';
 
@@ -43,7 +43,7 @@ const warningsData = [
   { id: 3, seviye: 'orta', kaynak: 'STK Risk', baslik: 'İncir Raf Ömrü', detay: 'Depodaki 45 kg incirin raf ömrünün bitmesine 2 gün kaldı. İsraf riski.', icon: 'warehouse' },
 ];
 
-const aiActingData = [
+const initialAiActingData = [
   { 
     id: 1, saat: '09:15', tarih: '10 Mayıs 2026', baslik: 'Sipariş Otomatik Onaylandı', kategori: 'Talep Yönetimi', 
     detay_ne: "Migros Market'in 200 kg domates siparişi sistem tarafından otomatik onaylandı.", 
@@ -71,6 +71,34 @@ export default function AILogsPage() {
   const router = useRouter();
   const [activeNav, setActiveNav] = useState('ai-logs');
   const [showNotif, setShowNotif] = useState(false);
+  const [aiActing, setAiActing] = useState<any[]>(initialAiActingData);
+
+  useEffect(() => {
+    fetch('/api/ai-logs')
+      .then(res => res.json())
+      .then(data => {
+        if (data && !data.error && data.length > 0) {
+          const formatted = data
+            .filter((d: any) => d.detay_ne != null)
+            .map((item: any) => ({
+              id: item.id,
+              saat: item.zaman,
+              tarih: item.tarih,
+              baslik: item.baslik,
+              kategori: item.kategori || 'Genel',
+              detay_ne: item.detay_ne,
+              detay_neden: item.detay_neden,
+              detay_veri: item.detay_veri,
+              detay_etki: item.detay_etki
+            }));
+            
+          if (formatted.length > 0) {
+            setAiActing(formatted);
+          }
+        }
+      })
+      .catch(err => console.error("AI Logs çekilemedi:", err));
+  }, []);
 
   const navClick = (item: typeof navItems[0]) => {
     setActiveNav(item.id);
@@ -194,7 +222,7 @@ export default function AILogsPage() {
                 <span className="panel-badge blue">Son 24 Saat: {aiActingData.length} İşlem</span>
               </div>
               <div className="acting-list">
-                {aiActingData.map(log => (
+                {aiActing.map(log => (
                   <div key={log.id} className="acting-item">
                     <div className="acting-time">
                       <span className="time-val">{log.saat}</span>
