@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { postWhatsAppDemo, WhatsAppDemoResult } from '@/lib/api/client';
+import { postWhatsAppDemo, WhatsAppDemoResult, getHarvestMessages, HarvestMessagesResponse } from '@/lib/api/client';
 
 interface ChatMessage {
   id: number;
@@ -60,13 +60,29 @@ export default function UreticiMesajPage() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedProducer, setSelectedProducer] = useState(PRODUCERS[0]);
-  const [activeTab, setActiveTab] = useState<'chat' | 'info'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'incoming' | 'info'>('chat');
+  const [incoming, setIncoming] = useState<HarvestMessagesResponse | null>(null);
+  const [incomingLoading, setIncomingLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const idRef = useRef(0);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Gelen bildirimler sekmesi açıldığında ve her mesaj gönderilince yenile
+  const refreshIncoming = async () => {
+    setIncomingLoading(true);
+    try {
+      const data = await getHarvestMessages(20);
+      setIncoming(data);
+    } catch { /* sessiz */ }
+    finally { setIncomingLoading(false); }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'incoming') refreshIncoming();
+  }, [activeTab]);
 
   async function sendMessage(text: string) {
     if (!text.trim() || loading) return;
@@ -102,6 +118,7 @@ export default function UreticiMesajPage() {
       ]);
     } finally {
       setLoading(false);
+      refreshIncoming(); // gelen bildirimler panelini güncelle
     }
   }
 
@@ -255,17 +272,21 @@ export default function UreticiMesajPage() {
         {/* ── Sağ: Analiz Paneli ── */}
         <div className="w-80 border-l border-white/10 flex flex-col overflow-hidden">
           <div className="px-4 py-3 border-b border-white/10 flex gap-2">
-            {(['chat', 'info'] as const).map(tab => (
+            {([
+              { id: 'chat', label: '🤖 AI Analizi' },
+              { id: 'incoming', label: '📨 Gelen Mesajlar' },
+              { id: 'info', label: 'ℹ️ Nasıl Çalışır' },
+            ] as const).map(tab => (
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
                 className={`text-xs px-3 py-1.5 rounded-lg transition-all ${
-                  activeTab === tab
+                  activeTab === tab.id
                     ? 'bg-emerald-600 text-white'
                     : 'text-white/40 hover:text-white'
                 }`}
               >
-                {tab === 'chat' ? '🤖 AI Analizi' : 'ℹ️ Nasıl Çalışır'}
+                {tab.label}
               </button>
             ))}
           </div>
@@ -359,6 +380,81 @@ export default function UreticiMesajPage() {
                       </div>
                     );
                   })
+              )}
+            </div>
+          ) : activeTab === 'incoming' ? (
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-white/40 uppercase tracking-wider">WhatsApp'tan Gelen Bildirimler</p>
+                <button
+                  onClick={refreshIncoming}
+                  disabled={incomingLoading}
+                  className="text-[10px] text-emerald-400 hover:text-emerald-300 disabled:opacity-40"
+                >
+                  {incomingLoading ? '⟳ Yükleniyor...' : '↻ Yenile'}
+                </button>
+              </div>
+
+              {incomingLoading && !incoming && (
+                <div className="flex justify-center py-8">
+                  <div className="flex gap-1">
+                    {[0,1,2].map(i => (
+                      <span key={i} className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: `${i * 150}ms` }} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {incoming && incoming.messages.length === 0 && (
+                <div className="text-center py-8 text-white/30 text-sm">
+                  Henüz mesaj yok.<br />WhatsApp'tan bir mesaj gönder.
+                </div>
+              )}
+
+              {/* Gelen mesajlar */}
+              {incoming && incoming.messages.map(msg => (
+                <div key={msg.id} className="bg-white/5 border border-white/10 rounded-xl p-3 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <div className="w-8 h-8 rounded-full bg-emerald-700 flex items-center justify-center text-sm flex-shrink-0">
+                      📱
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-white font-medium">"{msg.message}"</p>
+                      <p className="text-[11px] text-white/40 mt-0.5">{msg.time}</p>
+                    </div>
+                  </div>
+                  {msg.impact && (
+                    <div className="ml-10 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-1.5">
+                      <p className="text-[11px] text-emerald-300">⚡ {msg.impact}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* Hasat görevleri */}
+              {incoming && incoming.tasks.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <p className="text-[11px] text-white/40 uppercase tracking-wider">Oluşturulan Görevler</p>
+                  {incoming.tasks.map(task => (
+                    <div key={task.id} className={`flex items-center gap-3 p-3 rounded-xl border ${
+                      task.done
+                        ? 'bg-white/5 border-white/10 opacity-50'
+                        : task.priority === 'yuksek'
+                        ? 'bg-red-500/10 border-red-500/20'
+                        : 'bg-white/5 border-white/10'
+                    }`}>
+                      <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
+                        task.done ? 'bg-emerald-500 border-emerald-500' : 'border-white/30'
+                      }`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-white truncate">{task.title}</p>
+                        <p className="text-[10px] text-white/40">
+                          {task.priority === 'yuksek' ? '🔴 Yüksek' : task.priority === 'orta' ? '🟡 Orta' : '🟢 Düşük'} öncelik
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           ) : (

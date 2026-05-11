@@ -203,3 +203,54 @@ async def analyze_harvest(req: HarvestRequest):
             status_code=429 if is_rate_limit else 500,
             detail="AI şu an yoğun, lütfen birkaç saniye bekleyip tekrar deneyin." if is_rate_limit else "Hasat analizi yapılamadı.",
         )
+
+
+@router.get("/messages")
+async def harvest_messages(limit: int = 20):
+    """
+    Gelen WhatsApp hasat mesajlarını döner.
+    ai_logs tablosundan 'Hasat analizi yapıldı' kayıtları + tasks'tan hasat görevleri.
+    """
+    from database import get_supabase
+    sb = get_supabase()
+
+    logs_res = (
+        sb.table("ai_logs")
+        .select("id, zaman, tarih, mesaj, detay_etki, kategori")
+        .eq("baslik", "Hasat analizi yapıldı")
+        .order("id", desc=True)
+        .limit(limit)
+        .execute()
+    )
+
+    tasks_res = (
+        sb.table("tasks")
+        .select("id, is_name, durum, oncelik")
+        .ilike("is_name", "%hasat teslimi%")
+        .order("id", desc=True)
+        .limit(limit)
+        .execute()
+    )
+
+    # log'ları zenginleştir
+    messages = []
+    for log in (logs_res.data or []):
+        raw = log.get("mesaj", "")
+        messages.append({
+            "id": f"log-{log['id']}",
+            "time": f"{log.get('zaman', '')} · {log.get('tarih', '')}",
+            "message": raw,
+            "impact": log.get("detay_etki", ""),
+            "source": "whatsapp",
+        })
+
+    tasks = []
+    for t in (tasks_res.data or []):
+        tasks.append({
+            "id": t["id"],
+            "title": t.get("is_name", ""),
+            "done": bool(t.get("durum")),
+            "priority": t.get("oncelik", ""),
+        })
+
+    return {"messages": messages, "tasks": tasks}

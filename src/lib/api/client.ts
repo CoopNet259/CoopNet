@@ -214,6 +214,25 @@ export interface WhatsAppDemoResult {
   confidence_warning: string | null;
 }
 
+export interface HarvestMessagesResponse {
+  messages: Array<{
+    id: string;
+    time: string;
+    message: string;
+    impact: string;
+    source: string;
+  }>;
+  tasks: Array<{
+    id: number;
+    title: string;
+    done: boolean;
+    priority: string;
+  }>;
+}
+
+export const getHarvestMessages = (limit = 20) =>
+  api<HarvestMessagesResponse>(`/api/harvest/messages?limit=${limit}`);
+
 export const postWhatsAppDemo = (message: string, profileName = 'Demo Üretici') => {
   const form = new URLSearchParams();
   form.set('Body', message);
