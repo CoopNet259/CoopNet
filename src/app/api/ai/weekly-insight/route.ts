@@ -67,7 +67,7 @@ Hasat bildirimleri: şemada ayrı hasat tablosu yok (boş kabul et).
     const result = await model.generateContent({
       contents: [{ role: "user", parts: [{ text: contextText }] }],
       generationConfig: { responseMimeType: "application/json" },
-      systemInstruction: `Sen CoopFlow AI'sın. Kooperatif yöneticisi için haftalık gidişat özeti yaz.
+      systemInstruction: `Sen CoopNet AI'sın. Kooperatif yöneticisi için haftalık gidişat özeti yaz.
 
 SADECE şu JSON formatında yanıt ver:
 {

@@ -206,7 +206,7 @@ def _tr_date(iso: str) -> str:
     d = date_type.fromisoformat(iso)
     return f"{d.day} {_TR_MONTHS[d.month - 1]} {d.year}"
 
-DAILY_REPORT_SYSTEM = """Sen CoopFlow AI'sın — bir kadın kooperatifinin veri analistiyiz.
+DAILY_REPORT_SYSTEM = """Sen CoopNet AI'sın — bir kadın kooperatifinin veri analistiyiz.
 Sana verilen günlük operasyon verilerini analiz edip 4-5 maddelik Türkçe bir özet listesi üret.
 
 SADECE şu JSON formatında yanıt ver:

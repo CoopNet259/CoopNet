@@ -36,7 +36,7 @@ async def chat(req: ChatRequest):
 
 # ── POST /api/ai/daily-summary ────────────────────────────────
 
-DAILY_SUMMARY_SYSTEM = """Sen CoopFlow AI'sın. Kooperatif yöneticisi için günlük operasyon özeti yaz.
+DAILY_SUMMARY_SYSTEM = """Sen CoopNet AI'sın. Kooperatif yöneticisi için günlük operasyon özeti yaz.
 
 Format — tam olarak bu üç başlıkla:
 ## Bugün Ne Oldu
@@ -101,7 +101,7 @@ Hasat bildirimleri:
 
 # ── POST /api/ai/draft-email ──────────────────────────────────
 
-DRAFT_EMAIL_SYSTEM = """Sen CoopFlow AI'sın. Kooperatif adına tedarikçiye gönderilecek Türkçe sipariş e-postası yaz.
+DRAFT_EMAIL_SYSTEM = """Sen CoopNet AI'sın. Kooperatif adına tedarikçiye gönderilecek Türkçe sipariş e-postası yaz.
 
 SADECE şu JSON formatında yanıt ver:
 {
@@ -113,7 +113,7 @@ SADECE şu JSON formatında yanıt ver:
 Kurallar:
 - Resmi ve kısa üslup
 - suggested_quantity: mevcut miktarın 3 katı kadar öner (deponu dolduracak kadar)
-- İmzayı "CoopFlow Kooperatif Yönetim Sistemi" olarak yaz
+- İmzayı "CoopNet Kooperatif Yönetim Sistemi" olarak yaz
 - Body içinde \\n ile satır geç"""
 
 
@@ -144,7 +144,7 @@ async def draft_email(req: DraftEmailRequest):
 
 # ── POST /api/ai/draft-notification ──────────────────────────
 
-DRAFT_NOTIF_SYSTEM = """Sen CoopFlow AI'sın. Kooperatif müşteri temsilcisi adına müşteriye gönderilecek bildirim mesajı yaz.
+DRAFT_NOTIF_SYSTEM = """Sen CoopNet AI'sın. Kooperatif müşteri temsilcisi adına müşteriye gönderilecek bildirim mesajı yaz.
 
 SADECE şu JSON formatında yanıt ver:
 {
@@ -284,7 +284,7 @@ async def ai_logs(
 
 # ── POST /api/ai/weekly-insight ───────────────────────────────
 
-WEEKLY_INSIGHT_SYSTEM = """Sen CoopFlow AI'sın. Kooperatif yöneticisi için haftalık gidişat özeti yaz.
+WEEKLY_INSIGHT_SYSTEM = """Sen CoopNet AI'sın. Kooperatif yöneticisi için haftalık gidişat özeti yaz.
 
 SADECE şu JSON formatında yanıt ver:
 {

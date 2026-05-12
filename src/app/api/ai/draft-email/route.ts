@@ -27,7 +27,7 @@ Bu ürün için tedarikçiye sipariş e-postası taslağı hazırla.`,
     generationConfig: {
       responseMimeType: "application/json",
     },
-    systemInstruction: `Sen CoopFlow AI'sın. Kooperatif adına tedarikçiye gönderilecek Türkçe sipariş e-postası yaz.
+    systemInstruction: `Sen CoopNet AI'sın. Kooperatif adına tedarikçiye gönderilecek Türkçe sipariş e-postası yaz.
 
 SADECE şu JSON formatında yanıt ver:
 {
@@ -39,7 +39,7 @@ SADECE şu JSON formatında yanıt ver:
 Kurallar:
 - Resmi ve kısa üslup
 - suggested_quantity: mevcut miktarın 3 katı kadar öner (deponu dolduracak kadar)
-- İmzayı "CoopFlow Kooperatif Yönetim Sistemi" olarak yaz
+- İmzayı "CoopNet Kooperatif Yönetim Sistemi" olarak yaz
 - Body içinde \\n ile satır geç`,
   });
 
