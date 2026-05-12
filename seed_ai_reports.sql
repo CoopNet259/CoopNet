@@ -1,5 +1,4 @@
 -- AI Raporları — 4–11 Mayıs 2026 (her gün için ayrı rapor)
--- Supabase SQL Editor'da çalıştırın
 
 -- Sequence'i mevcut en yüksek id'ye getir (explicit insert sonrası kayması önlenir)
 SELECT setval('ai_reports_id_seq', (SELECT MAX(id) FROM ai_reports));

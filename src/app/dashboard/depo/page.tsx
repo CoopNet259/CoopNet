@@ -15,37 +15,37 @@ const Icon = ({ d, size = 18 }: { d: string | string[]; size?: number }) => (
 );
 
 const icons: Record<string, string | string[]> = {
-  grid:     'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z',
-  warehouse:['M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z','M9 22V12h6v10'],
-  clipboard:['M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2','M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z'],
-  users:    ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2','M23 21v-2a4 4 0 0 0-3-3.87','M16 3.13a4 4 0 0 1 0 7.75'],
-  dollar:   ['M12 1v22','M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'],
-  alert:    ['M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z','M12 9v4','M12 17h.01'],
-  brain:    'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z',
-  log:      ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z','M14 2v6h6'],
-  phone:    ['M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z'],
-  chevron:  'M9 18l6-6-6-6',
-  shift:     ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2','M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z','M23 21v-2a4 4 0 0 0-3-3.87','M16 3.13a4 4 0 0 1 0 7.75'],
-  logout:   ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4','M16 17l5-5-5-5','M21 12H9'],
-  bell:     ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9','M13.73 21a2 2 0 0 1-3.46 0'],
-  search:   ['M11 17.25a6.25 6.25 0 1 0 0-12.5 6.25 6.25 0 0 0 0 12.5z','M16 16l3.5 3.5'],
-  trending: ['M23 6l-9.5 9.5-5-5L1 18','M17 6h6v6'],
-  package:  ['M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'],
-  plus:     'M12 5v14M5 12h14',
-  user:     ['M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2','M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'],
+  grid: 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z',
+  warehouse: ['M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', 'M9 22V12h6v10'],
+  clipboard: ['M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2', 'M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v0a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z'],
+  users: ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2', 'M23 21v-2a4 4 0 0 0-3-3.87', 'M16 3.13a4 4 0 0 1 0 7.75'],
+  dollar: ['M12 1v22', 'M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'],
+  alert: ['M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z', 'M12 9v4', 'M12 17h.01'],
+  brain: 'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z',
+  log: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', 'M14 2v6h6'],
+  phone: ['M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z'],
+  chevron: 'M9 18l6-6-6-6',
+  shift: ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2', 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M23 21v-2a4 4 0 0 0-3-3.87', 'M16 3.13a4 4 0 0 1 0 7.75'],
+  logout: ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4', 'M16 17l5-5-5-5', 'M21 12H9'],
+  bell: ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.73 21a2 2 0 0 1-3.46 0'],
+  search: ['M11 17.25a6.25 6.25 0 1 0 0-12.5 6.25 6.25 0 0 0 0 12.5z', 'M16 16l3.5 3.5'],
+  trending: ['M23 6l-9.5 9.5-5-5L1 18', 'M17 6h6v6'],
+  package: ['M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z'],
+  plus: 'M12 5v14M5 12h14',
+  user: ['M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2', 'M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'],
 };
 
 const navItems = [
-  { id: 'dashboard',   label: 'Ana Sayfa',         icon: 'grid',      path: '/dashboard' },
-  { id: 'depo',        label: 'Depo',              icon: 'warehouse', path: '/dashboard/depo' },
-  { id: 'talepler',    label: 'Talepler',          icon: 'clipboard', path: '/dashboard/talepler' },
-  { id: 'ureticiler',  label: 'Üreticiler',        icon: 'users',     path: '/dashboard/ureticiler' },
-  { id: 'finansal',    label: 'Finansal Raporlar', icon: 'dollar',    path: '/dashboard/finansal' },
-  { id: 'anomali',     label: 'Anomali',           icon: 'alert',     path: '/dashboard/anomali' },
-  { id: 'ai-raporlar', label: 'AI Raporları',      icon: 'brain',     path: '/dashboard/ai-raporlar' },
-  { id: 'ai-logs',     label: 'AI Logs',           icon: 'log',       path: '/dashboard/ai-logs' },
-  { id: 'vardiye',      label: 'Vardiye',           icon: 'shift',     path: '/dashboard/vardiye' },
-  { id: 'uretici-mesaj', label: 'Üretici Mesaj',  icon: 'phone',     path: '/dashboard/uretici-mesaj' },
+  { id: 'dashboard', label: 'Ana Sayfa', icon: 'grid', path: '/dashboard' },
+  { id: 'depo', label: 'Depo', icon: 'warehouse', path: '/dashboard/depo' },
+  { id: 'talepler', label: 'Talepler', icon: 'clipboard', path: '/dashboard/talepler' },
+  { id: 'ureticiler', label: 'Üreticiler', icon: 'users', path: '/dashboard/ureticiler' },
+  { id: 'finansal', label: 'Finansal Raporlar', icon: 'dollar', path: '/dashboard/finansal' },
+  { id: 'anomali', label: 'Anomali', icon: 'alert', path: '/dashboard/anomali' },
+  { id: 'ai-raporlar', label: 'AI Raporları', icon: 'brain', path: '/dashboard/ai-raporlar' },
+  { id: 'ai-logs', label: 'AI Logs', icon: 'log', path: '/dashboard/ai-logs' },
+  { id: 'vardiye', label: 'Vardiye', icon: 'shift', path: '/dashboard/vardiye' },
+  { id: 'uretici-mesaj', label: 'Üretici Mesaj', icon: 'phone', path: '/dashboard/uretici-mesaj' },
 ];
 
 type UrgencyLevel = 'kritik' | 'dusuk' | 'normal' | 'iyi';
@@ -64,15 +64,15 @@ function emojiFor(name: string) {
 
 interface TrendUyari {
   emoji: string; urun: string; artis: string;
-  neden: string; oneri: string; seviye: 'yuksek'|'orta'|'dusuk';
+  neden: string; oneri: string; seviye: 'yuksek' | 'orta' | 'dusuk';
 }
 
 const trendUyarilari: TrendUyari[] = [
-  { emoji:'🍅', urun:'Domates',   artis:'+34%', neden:'Yaz sezonu + Ramazan öncesi talep artışı',       oneri:'50 kg acil sipariş ver',      seviye:'yuksek' },
-  { emoji:'🍑', urun:'Kayısı',    artis:'+28%', neden:'Kayısı hasadı başladı, pazar talebi yüksek',     oneri:'Tedarikçi ile iletişime geç', seviye:'yuksek' },
-  { emoji:'🫑', urun:'Biber',     artis:'+18%', neden:'Mevsimsel tüketim artışı — Haziran dönemi',      oneri:'30 kg ek sipariş planla',     seviye:'orta'   },
-  { emoji:'🟣', urun:'İncir',     artis:'+22%', neden:'Kurutulmuş incir sezonu başlıyor',               oneri:'Hatice Arslan\'ı devreye al', seviye:'yuksek' },
-  { emoji:'🥕', urun:'Havuç',     artis:'+12%', neden:'Okul kantinleri için toplu sipariş bekleniyor',  oneri:'Stok gözlemini artır',        seviye:'orta'   },
+  { emoji: '🍅', urun: 'Domates', artis: '+34%', neden: 'Yaz sezonu + Kurban bayramı öncesi talep artışı', oneri: '50 kg acil sipariş ver', seviye: 'yuksek' },
+  { emoji: '🍑', urun: 'Kayısı', artis: '+28%', neden: 'Kayısı hasadı başladı, pazar talebi yüksek', oneri: 'Tedarikçi ile iletişime geç', seviye: 'yuksek' },
+  { emoji: '🫑', urun: 'Biber', artis: '+18%', neden: 'Mevsimsel tüketim artışı — Haziran dönemi', oneri: '30 kg ek sipariş planla', seviye: 'orta' },
+  { emoji: '🟣', urun: 'İncir', artis: '+22%', neden: 'Kurutulmuş incir sezonu başlıyor', oneri: 'Hatice Arslan\'ı devreye al', seviye: 'yuksek' },
+  { emoji: '🥕', urun: 'Havuç', artis: '+12%', neden: 'Okul kantinleri için toplu sipariş bekleniyor', oneri: 'Stok gözlemini artır', seviye: 'orta' },
 ];
 
 function tierToUrgency(tier: string): UrgencyLevel {
@@ -84,7 +84,7 @@ function tierToUrgency(tier: string): UrgencyLevel {
 export default function DepoPage() {
   const router = useRouter();
   const [activeNav, setActiveNav] = useState('depo');
-  const [filtre, setFiltre] = useState<'hepsi'|'kritik'|'normal'>('hepsi');
+  const [filtre, setFiltre] = useState<'hepsi' | 'kritik' | 'normal'>('hepsi');
   const [stokVerisi, setStokVerisi] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -145,7 +145,7 @@ export default function DepoPage() {
         </nav>
 
         <div className="sidebar-deco">
-          {['🌾','🍅','🌿','🫑','🍆'].map((e, i) => <span key={i}>{e}</span>)}
+          {['🌾', '🍅', '🌿', '🫑', '🍆'].map((e, i) => <span key={i}>{e}</span>)}
         </div>
 
         <div className="sidebar-footer">
@@ -189,7 +189,7 @@ export default function DepoPage() {
             </div>
             <div className="depo-kpi-item gold">
               <span className="depo-kpi-icon">📈</span>
-              <div><strong>{trendUyarilari.filter(t=>t.seviye==='yuksek').length}</strong><p>Yüksek Talep Tahmini</p></div>
+              <div><strong>{trendUyarilari.filter(t => t.seviye === 'yuksek').length}</strong><p>Yüksek Talep Tahmini</p></div>
             </div>
             <div className="depo-kpi-item blue">
               <span className="depo-kpi-icon">📦</span>
@@ -206,10 +206,10 @@ export default function DepoPage() {
                 <Icon d={icons.package} size={16} />
                 <h3>Stok Durumu</h3>
                 <div className="filtre-tabs">
-                  {(['hepsi','kritik','normal'] as const).map(f => (
-                    <button key={f} className={`filtre-btn${filtre===f?' active':''}`}
-                      onClick={()=>setFiltre(f)}>
-                      {f==='hepsi'?'Hepsi':f==='kritik'?'🔴 Kritik':'Normal'}
+                  {(['hepsi', 'kritik', 'normal'] as const).map(f => (
+                    <button key={f} className={`filtre-btn${filtre === f ? ' active' : ''}`}
+                      onClick={() => setFiltre(f)}>
+                      {f === 'hepsi' ? 'Hepsi' : f === 'kritik' ? '🔴 Kritik' : 'Normal'}
                     </button>
                   ))}
                 </div>
@@ -242,13 +242,13 @@ export default function DepoPage() {
                           <span className="stok-kategori">{urun.unit}</span>
                         </div>
                         <span className={`urgency-badge ${urgency}`}>
-                          {urgency==='kritik'?'Kritik':urgency==='dusuk'?'Düşük':'İyi'}
+                          {urgency === 'kritik' ? 'Kritik' : urgency === 'dusuk' ? 'Düşük' : 'İyi'}
                         </span>
                       </div>
                       <div className="stok-values">
                         <span className="stok-mevcut">{urun.current} {urun.unit}</span>
                         <span className="stok-kapasite">/ {urun.capacity} {urun.unit}</span>
-                        <span className="stok-pct" style={{color: urun.pct<=25?'var(--red-500)':urun.pct<=40?'var(--gold-500)':'var(--green-500)'}}>
+                        <span className="stok-pct" style={{ color: urun.pct <= 25 ? 'var(--red-500)' : urun.pct <= 40 ? 'var(--gold-500)' : 'var(--green-500)' }}>
                           %{urun.pct}
                         </span>
                       </div>
@@ -258,7 +258,7 @@ export default function DepoPage() {
                       <div className="stok-footer">
                         <span>📦 Gerçek zamanlı</span>
                         {urun.is_critical && (
-                          <button className="siparis-btn" onClick={()=>alert(`${urun.name} için sipariş formu açılıyor…`)}>
+                          <button className="siparis-btn" onClick={() => alert(`${urun.name} için sipariş formu açılıyor…`)}>
                             Sipariş Ver →
                           </button>
                         )}
@@ -292,7 +292,7 @@ export default function DepoPage() {
                         <span className={`trend-artis ${t.seviye}`}>{t.artis} talep artışı bekleniyor</span>
                       </div>
                       <span className={`seviye-badge ${t.seviye}`}>
-                        {t.seviye==='yuksek'?'Yüksek':t.seviye==='orta'?'Orta':'Düşük'}
+                        {t.seviye === 'yuksek' ? 'Yüksek' : t.seviye === 'orta' ? 'Orta' : 'Düşük'}
                       </span>
                     </div>
                     <p className="trend-neden">📊 {t.neden}</p>
