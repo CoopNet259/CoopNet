@@ -62,19 +62,6 @@ function emojiFor(name: string) {
   return '📦';
 }
 
-interface Calisan {
-  id: number; ad: string; rol: string;
-  musait: boolean; vardiya: string; gorev?: string;
-}
-
-const calisanlar: Calisan[] = [
-  { id:1, ad:'Fatma Kaya',    rol:'Depo Sorumlusu',   musait:true,  vardiya:'08:00–16:00', gorev:'Domates bölümü kontrolü' },
-  { id:2, ad:'Emine Çelik',   rol:'Stok Takip',       musait:true,  vardiya:'08:00–16:00', gorev:'Giriş sayımı'             },
-  { id:3, ad:'Hatice Arslan', rol:'Taşıma Operatörü', musait:true,  vardiya:'09:00–17:00', gorev:'Müsait'                   },
-  { id:4, ad:'Zeynep Öztürk', rol:'Depo Asistanı',    musait:false, vardiya:'İzinli',      gorev:undefined                  },
-  { id:5, ad:'Ayşe Şahin',    rol:'Kalite Kontrol',   musait:false, vardiya:'16:00–24:00', gorev:undefined                  },
-];
-
 interface TrendUyari {
   emoji: string; urun: string; artis: string;
   neden: string; oneri: string; seviye: 'yuksek'|'orta'|'dusuk';
@@ -122,7 +109,6 @@ export default function DepoPage() {
     .sort((a, b) => a.pct - b.pct);
 
   const kritikSayisi = stokVerisi.filter(u => u.is_critical).length;
-  const musaitSayisi = calisanlar.filter(c => c.musait).length;
 
   return (
     <div className="coopnet-root">
@@ -205,10 +191,6 @@ export default function DepoPage() {
               <span className="depo-kpi-icon">🔴</span>
               <div><strong>{loading ? '—' : kritikSayisi}</strong><p>Kritik Stok</p></div>
             </div>
-            <div className="depo-kpi-item green">
-              <span className="depo-kpi-icon">👷</span>
-              <div><strong>{musaitSayisi}/{calisanlar.length}</strong><p>Müsait Çalışan</p></div>
-            </div>
             <div className="depo-kpi-item gold">
               <span className="depo-kpi-icon">📈</span>
               <div><strong>{trendUyarilari.filter(t=>t.seviye==='yuksek').length}</strong><p>Yüksek Talep Tahmini</p></div>
@@ -222,37 +204,7 @@ export default function DepoPage() {
           {/* 3-panel layout */}
           <div className="depo-layout">
 
-            {/* SOL — Çalışanlar */}
-            <aside className="depo-panel depo-panel-left">
-              <div className="panel-header">
-                <Icon d={icons.user} size={16} />
-                <h3>Depo Çalışanları</h3>
-                <span className="panel-badge green">{musaitSayisi} müsait</span>
-              </div>
-              <div className="calisan-list">
-                {[...calisanlar].sort((a,b) => (b.musait ? 1 : 0) - (a.musait ? 1 : 0)).map(c => (
-                  <div key={c.id} className={`calisan-card${c.musait ? '' : ' pasif'}`}>
-                    <div className="calisan-avatar">
-                      {c.ad.split(' ').map(w=>w[0]).join('').slice(0,2)}
-                      <span className={`calisan-status-dot ${c.musait ? 'aktif' : 'pasif'}`} />
-                    </div>
-                    <div className="calisan-info">
-                      <strong>{c.ad}</strong>
-                      <p>{c.rol}</p>
-                      <span className="calisan-vardiya">{c.vardiya}</span>
-                    </div>
-                    {c.musait && c.gorev && (
-                      <div className="calisan-gorev">{c.gorev}</div>
-                    )}
-                    {!c.musait && (
-                      <span className="calisan-ofline-badge">Çevrimdışı</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </aside>
-
-            {/* ORTA — Stok kartları */}
+            {/* Stok kartları */}
             <div className="depo-panel depo-panel-center">
               <div className="panel-header">
                 <Icon d={icons.package} size={16} />
