@@ -1,8 +1,11 @@
 from __future__ import annotations
-from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, Request
+import asyncio
+import json
+from datetime import datetime, date as date_type, timezone
+from fastapi import APIRouter, HTTPException, Request, Query
 from database import get_supabase
 from services.logger import log_ai
+from services.gemini_client import get_model
 from config import settings
 
 router = APIRouter(prefix="/api/cron", tags=["cron"])
@@ -191,3 +194,150 @@ async def anomaly_check(request: Request):
     }
     log_ai("anomaly_check", "cron:anomaly_check", result)
     return result
+
+
+# ── GET /api/cron/generate-daily-report ──────────────────────
+# Günlük verileri okur → Gemini ile ai_reports satırı üretir/günceller.
+
+_TR_MONTHS = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran",
+              "Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"]
+
+def _tr_date(iso: str) -> str:
+    d = date_type.fromisoformat(iso)
+    return f"{d.day} {_TR_MONTHS[d.month - 1]} {d.year}"
+
+DAILY_REPORT_SYSTEM = """Sen CoopFlow AI'sın — bir kadın kooperatifinin veri analistiyiz.
+Sana verilen günlük operasyon verilerini analiz edip 4-5 maddelik Türkçe bir özet listesi üret.
+
+SADECE şu JSON formatında yanıt ver:
+["madde 1", "madde 2", "madde 3", "madde 4"]
+
+Kurallar:
+- Her madde maksimum 120 karakter
+- Rakamları mutlaka kullan (₺ tutarlar, kg miktarlar)
+- Kritik stok, teslimat, transfer varsa bunları öne çıkar
+- Öneri ve aksiyon da ekle (\"Öneri:\" ile başlayan madde)
+- Uydurma, sadece verilen veriyi kullan"""
+
+
+@router.get("/generate-daily-report")
+async def generate_daily_report(
+    request: Request,
+    date: str = Query(default=None, description="YYYY-MM-DD formatında tarih, varsayılan bugün"),
+):
+    _check_secret(request)
+    sb = get_supabase()
+    from datetime import timedelta
+    target = date or (date_type.today() - timedelta(days=1)).isoformat()
+    tr_date = _tr_date(target)
+
+    # 1) Günlük satış özeti
+    sales_res = sb.table("daily_sales").select("*").eq("tarih", target).execute()
+    sales = sales_res.data[0] if sales_res.data else None
+
+    # 2) Stok hareketleri
+    movements_res = (
+        sb.table("stock_movements")
+        .select("urun_adi, giris_kg, cikis_satis_kg, cikis_transfer_kg")
+        .eq("tarih", target)
+        .execute()
+    )
+    movements = movements_res.data or []
+
+    # 3) Üretici teslimatları
+    supplies_res = sb.table("producer_supplies").select("*").eq("tarih", target).execute()
+    supplies = supplies_res.data or []
+
+    # 4) Kardeş koop transferleri
+    transfers_res = sb.table("cooperative_transfers").select("*").eq("tarih", target).execute()
+    transfers = transfers_res.data or []
+
+    # 5) Güncel kritik stoklar (products)
+    products_res = sb.table("products").select("ad, emoji, mevcut_kg, kapasite_kg").execute()
+    critical = [
+        p for p in (products_res.data or [])
+        if (p.get("mevcut_kg") or 0) <= (p.get("kapasite_kg") or 1) * 0.20
+    ]
+
+    # Prompt oluştur
+    lines = [f"Tarih: {tr_date}\n"]
+
+    if sales:
+        lines.append(
+            f"Günlük satış: {sales.get('toplam_satis_kg')} kg, "
+            f"gelir ₺{sales.get('toplam_gelir'):,.0f}, "
+            f"{sales.get('siparis_sayisi')} sipariş, "
+            f"en çok satan: {sales.get('en_cok_satan_urun', '-')}"
+        )
+    else:
+        lines.append("Günlük satış verisi: mevcut değil")
+
+    if movements:
+        lines.append("\nStok hareketleri:")
+        for m in movements:
+            giris = m.get("giris_kg", 0) or 0
+            satis = m.get("cikis_satis_kg", 0) or 0
+            transfer = m.get("cikis_transfer_kg", 0) or 0
+            parts = []
+            if giris: parts.append(f"+{giris} kg giriş")
+            if satis: parts.append(f"-{satis} kg satış")
+            if transfer: parts.append(f"-{transfer} kg transfer")
+            if parts:
+                lines.append(f"  {m.get('urun_adi')}: {', '.join(parts)}")
+
+    if supplies:
+        lines.append("\nÜretici teslimatları:")
+        for s in supplies:
+            lines.append(
+                f"  {s.get('uretici_adi')}: {s.get('urun_adi')} "
+                f"{s.get('miktar_kg')} kg @ ₺{s.get('birim_fiyat')}/kg = ₺{s.get('toplam_tutar')}"
+            )
+
+    if transfers:
+        lines.append("\nKardeş koop transferleri:")
+        for t in transfers:
+            lines.append(
+                f"  {t.get('kardes_koop_adi')}: {t.get('urun_adi')} "
+                f"{t.get('miktar_kg')} kg → ₺{t.get('toplam_tutar')} ({t.get('amac', '')})"
+            )
+
+    if critical:
+        lines.append("\nKritik stok uyarıları (kapasitenin ≤%20):")
+        for p in critical:
+            pct = round((p.get("mevcut_kg", 0) / (p.get("kapasite_kg") or 1)) * 100)
+            lines.append(f"  {p.get('emoji', '')} {p.get('ad')}: {p.get('mevcut_kg')} kg (%{pct})")
+
+    prompt = "\n".join(lines)
+
+    try:
+        model = get_model(system_instruction=DAILY_REPORT_SYSTEM)
+        result = await asyncio.to_thread(
+            model.generate_content,
+            prompt,
+            generation_config={"response_mime_type": "application/json"},
+        )
+        maddeler = json.loads(result.text)
+        if not isinstance(maddeler, list):
+            raise ValueError("Gemini JSON array döndürmedi")
+    except Exception as exc:
+        msg = str(exc)
+        is_rl = "429" in msg or "quota" in msg.lower()
+        raise HTTPException(
+            status_code=429 if is_rl else 500,
+            detail="AI şu an yoğun, tekrar deneyin." if is_rl else f"Rapor üretilemedi: {msg}",
+        )
+
+    baslik = f"AI Günlük Analiz Özeti — {tr_date}"
+
+    # Aynı güne ait rapor varsa güncelle, yoksa ekle
+    existing = sb.table("ai_reports").select("id").ilike("baslik", f"%{tr_date}%").execute()
+    if existing.data:
+        report_id = existing.data[0]["id"]
+        sb.table("ai_reports").update({"baslik": baslik, "maddeler": maddeler}).eq("id", report_id).execute()
+        action = "updated"
+    else:
+        sb.table("ai_reports").insert({"baslik": baslik, "maddeler": maddeler}).execute()
+        action = "created"
+
+    log_ai("generate_daily_report", f"cron:generate_daily_report:{target}", {"action": action, "date": target})
+    return {"date": target, "action": action, "baslik": baslik, "maddeler": maddeler}
