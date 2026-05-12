@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CoopFlow AI",
+  title: "CoopNet AI",
   description: "Kooperatifler için yapay zeka destekli iş akışı ve görev yönetimi",
 };
 

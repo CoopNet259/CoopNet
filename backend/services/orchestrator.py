@@ -8,7 +8,7 @@ from tools.handlers import execute_tool_call
 from services.logger import log_ai
 from models.schemas import ChatMessage
 
-SYSTEM_PROMPT = """Sen CoopFlow AI'sın — bir kooperatifin iş akışını yöneten yapay zeka ajanısın.
+SYSTEM_PROMPT = """Sen CoopNet AI'sın — bir kooperatifin iş akışını yöneten yapay zeka ajanısın.
 
 Görevin: Kullanıcının sorusunu anla, gerekli tool'ları çağırarak gerçek veriye bak, sonra net ve kısa Türkçe yanıt ver.
 

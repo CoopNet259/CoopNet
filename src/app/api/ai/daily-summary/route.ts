@@ -62,7 +62,7 @@ ${context.harvests.map(h =>
 ).join("\n")}`,
       }],
     }],
-    systemInstruction: `Sen CoopFlow AI'sın. Kooperatif yöneticisi için günlük operasyon özeti yaz.
+    systemInstruction: `Sen CoopNet AI'sın. Kooperatif yöneticisi için günlük operasyon özeti yaz.
 
 Format — tam olarak bu üç başlıkla:
 ## Bugün Ne Oldu

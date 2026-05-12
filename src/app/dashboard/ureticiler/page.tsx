@@ -3,6 +3,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './ureticiler.css';
 import { getProducers } from '@/lib/api/client';
+import NotifBell from '../components/NotifBell';
+
+const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+function todayTr(): string { const n = new Date(); return `${n.getDate()} ${TR_MONTHS[n.getMonth()]} ${n.getFullYear()}`; }
 
 const Icon = ({ d, size = 18, extra = '' }: { d: string | string[]; size?: number; extra?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={extra}>
@@ -19,7 +23,9 @@ const icons: Record<string, string | string[]> = {
   alert:    ['M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z','M12 9v4','M12 17h.01'],
   brain:    'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z',
   log:      ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z','M14 2v6h6'],
+  phone:    ['M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z'],
   chevron:  'M9 18l6-6-6-6',
+  shift:     ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2','M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z','M23 21v-2a4 4 0 0 0-3-3.87','M16 3.13a4 4 0 0 1 0 7.75'],
   logout:   ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4','M16 17l5-5-5-5','M21 12H9'],
   bell:     ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9','M13.73 21a2 2 0 0 1-3.46 0'],
   search:   ['M11 17.25a6.25 6.25 0 1 0 0-12.5 6.25 6.25 0 0 0 0 12.5z','M16 16l3.5 3.5'],
@@ -39,6 +45,8 @@ const navItems = [
   { id: 'anomali',     label: 'Anomali',           icon: 'alert',     path: '/dashboard/anomali' },
   { id: 'ai-raporlar', label: 'AI Raporları',      icon: 'brain',     path: '/dashboard/ai-raporlar' },
   { id: 'ai-logs',     label: 'AI Logs',           icon: 'log',       path: '/dashboard/ai-logs' },
+  { id: 'vardiye',      label: 'Vardiye',           icon: 'shift',     path: '/dashboard/vardiye' },
+  { id: 'uretici-mesaj', label: 'Üretici Mesaj',  icon: 'phone',     path: '/dashboard/uretici-mesaj' },
 ];
 
 const initialTalebeGoreUreticiler = [
@@ -61,7 +69,6 @@ const initialKardesUreticiler = [
 export default function UreticilerPage() {
   const router = useRouter();
   const [activeNav, setActiveNav] = useState('ureticiler');
-  const [showNotif, setShowNotif] = useState(false);
   const [talebeGoreUreticiler, setTalebeGoreUreticiler] = useState<any[]>(initialTalebeGoreUreticiler);
   const [genelUreticiler, setGenelUreticiler] = useState<any[]>(initialGenelUreticiler);
   const [kardesUreticiler, setKardesUreticiler] = useState<any[]>(initialKardesUreticiler);
@@ -134,7 +141,6 @@ export default function UreticilerPage() {
             <div className="avatar">ÜK</div>
             <div className="user-chip-text">
               <h4>Üreten Kadınlar</h4>
-              <p>Admin Paneli</p>
             </div>
           </div>
           <button className="logout-btn" onClick={() => router.push('/login')}>
@@ -152,19 +158,11 @@ export default function UreticilerPage() {
             <span style={{ fontSize: 22 }}>👩‍🌾</span>
             <div>
               <h2 className="header-coop-name">Üreticiler Yönetimi</h2>
-              <p className="header-coop-sub">Talep Karşılama ve Kardeş Üretici Ağı · 10 Mayıs 2026</p>
+              <p className="header-coop-sub">Talep Karşılama ve Kardeş Üretici Ağı · {todayTr()}</p>
             </div>
-          </div>
-          <div className="search-box">
-            <Icon d={icons.search} size={15} />
-            <input type="text" placeholder="Üretici veya ürün ara…" />
           </div>
           <div className="header-actions">
-            <div style={{ position: 'relative' }}>
-              <button className="icon-btn" onClick={() => setShowNotif(!showNotif)} id="notif-btn">
-                <Icon d={icons.bell} size={18} />
-              </button>
-            </div>
+            <NotifBell />
           </div>
         </header>
 
@@ -194,7 +192,7 @@ export default function UreticilerPage() {
                     </div>
                     <div className="uretici-detay">
                       <div className="uretici-urunler">
-                        {uretici.urunler.map((u, i) => <span key={i} className="urun-badge">{u}</span>)}
+                        {(uretici.urunler ?? []).map((u: string, i: number) => <span key={i} className="urun-badge">{u}</span>)}
                       </div>
                       <div className="uretici-kapasite">
                         <Icon d={icons.warehouse} size={12} /> Kapasite: <strong>{uretici.kapasite}</strong>
@@ -231,7 +229,7 @@ export default function UreticilerPage() {
                     </div>
                     <div className="uretici-detay">
                       <div className="uretici-urunler">
-                        {uretici.urunler.map((u, i) => <span key={i} className="urun-badge">{u}</span>)}
+                        {(uretici.urunler ?? []).map((u: string, i: number) => <span key={i} className="urun-badge">{u}</span>)}
                       </div>
                       <div className="uretici-kapasite" style={{ marginBottom: 4 }}>
                         <Icon d={icons.warehouse} size={12} /> Kapasite: <strong>{uretici.kapasite}</strong>

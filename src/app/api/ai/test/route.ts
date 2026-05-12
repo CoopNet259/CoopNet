@@ -5,7 +5,7 @@ export async function GET() {
   const model = getModel();
 
   const result = await model.generateContent(
-    "Sen CoopFlow AI'sın. Kendini tek cümleyle Türkçe tanıt."
+    "Sen CoopNet AI'sın. Kendini tek cümleyle Türkçe tanıt."
   );
 
   const text = result.response.text();

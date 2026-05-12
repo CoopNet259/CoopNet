@@ -47,7 +47,7 @@ Saat: ${order.saat ?? ""}`,
       generationConfig: {
         responseMimeType: "application/json",
       },
-      systemInstruction: `Sen CoopFlow AI'sın. Kooperatif müşteri temsilcisi adına müşteriye gönderilecek bildirim mesajı yaz.
+      systemInstruction: `Sen CoopNet AI'sın. Kooperatif müşteri temsilcisi adına müşteriye gönderilecek bildirim mesajı yaz.
 
 SADECE şu JSON formatında yanıt ver:
 {

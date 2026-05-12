@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './dashboard.css';
-import { getDashboardSummary, patchTask, type DashboardSummary, type StockItem, type OrderItem, type TaskItem } from '@/lib/api/client';
+import { getDashboardSummary, patchTask, getDashboardBrief, type DashboardSummary, type StockItem, type OrderItem, type TaskItem, type DashboardBrief } from '@/lib/api/client';
+import NotifBell from './components/NotifBell';
 
 /* ── Icons ── */
 const Icon = ({ d, size = 18, extra = '' }: { d: string | string[]; size?: number; extra?: string }) => (
@@ -26,6 +27,7 @@ const icons: Record<string, string | string[]> = {
   search:    ['M11 17.25a6.25 6.25 0 1 0 0-12.5 6.25 6.25 0 0 0 0 12.5z','M16 16l3.5 3.5'],
   logout:    ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4','M16 17l5-5-5-5','M21 12H9'],
   chevron:   'M9 18l6-6-6-6',
+  shift:     ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2','M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z','M23 21v-2a4 4 0 0 0-3-3.87','M16 3.13a4 4 0 0 1 0 7.75'],
   check:     'M20 6L9 17l-5-5',
   package:   ['M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z','M3.27 6.96L12 12.01l8.73-5.05','M12 22.08V12'],
   phone:     ['M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z'],
@@ -41,6 +43,7 @@ const navItems = [
   { id: 'anomali',     label: 'Anomali',          icon: 'alert',     path: '/dashboard/anomali' },
   { id: 'ai-raporlar', label: 'AI Raporları',     icon: 'brain',     path: '/dashboard/ai-raporlar' },
   { id: 'ai-logs',     label: 'AI Logs',          icon: 'log',       path: '/dashboard/ai-logs' },
+  { id: 'vardiye',      label: 'Vardiye',           icon: 'shift',     path: '/dashboard/vardiye' },
   { id: 'uretici-mesaj', label: 'Üretici Mesaj',  icon: 'phone',     path: '/dashboard/uretici-mesaj' },
 ];
 
@@ -63,16 +66,26 @@ function tierToAciliyet(tier: string) {
   return 'orta';
 }
 
+const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+                   'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+
+function parseTrDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return `${d} ${TR_MONTHS[m - 1]} ${y}`;
+}
+
 /* ═══════════════════════════════════════════════════ */
 
 export default function DashboardPage() {
   const router = useRouter();
   const [activeNav, setActiveNav] = useState('dashboard');
-  const [showNotif, setShowNotif] = useState(false);
   const [barsReady, setBarsReady] = useState(false);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [brief, setBrief] = useState<DashboardBrief | null>(null);
+  const [briefLoading, setBriefLoading] = useState(true);
+  const [briefError, setBriefError] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setBarsReady(true), 150);
@@ -83,6 +96,12 @@ export default function DashboardPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
+
+    getDashboardBrief()
+      .then(data => { setBrief(data); setBriefError(false); })
+      .catch(() => setBriefError(true))
+      .finally(() => setBriefLoading(false));
+
     return () => clearTimeout(t);
   }, []);
 
@@ -122,7 +141,7 @@ export default function DashboardPage() {
     { label: 'Açık Görevler',    value: String(summary.kpis.open_tasks),      icon: '✅', renk: 'gold'  },
     { label: 'Hasat (haftalık)', value: `${summary.kpis.harvest_kg_week} kg`, icon: '🌾', renk: 'green' },
     { label: 'Talep Trendi',     value: `${summary.kpis.order_trend_pct > 0 ? '+' : ''}${summary.kpis.order_trend_pct}%`, icon: '📈', renk: summary.kpis.order_trend_pct >= 0 ? 'green' : 'red' },
-    { label: 'Tarih',            value: summary.date, icon: '📅', renk: 'blue' },
+    { label: 'Tarih',            value: parseTrDate(summary.date), icon: '📅', renk: 'blue' },
   ] : [];
 
   const ureticiler = [
@@ -178,7 +197,6 @@ export default function DashboardPage() {
             <div className="avatar">ÜK</div>
             <div className="user-chip-text">
               <h4>Üreten Kadınlar</h4>
-              <p>Admin Paneli</p>
             </div>
           </div>
           <button className="logout-btn" onClick={() => router.push('/login')} title="Çıkış Yap">
@@ -196,43 +214,12 @@ export default function DashboardPage() {
             <span className="header-coop-icon">🌱</span>
             <div>
               <h2 className="header-coop-name">Üreten Kadınlar Kooperatif</h2>
-              <p className="header-coop-sub">Yönetim Paneli · {summary ? new Date(summary.date).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}</p>
+              <p className="header-coop-sub">Yönetim Paneli · {summary ? parseTrDate(summary.date) : '—'}</p>
             </div>
-          </div>
-
-          <div className="search-box">
-            <Icon d={icons.search} size={15} />
-            <input type="text" placeholder="Ürün, üretici, talep ara…" />
           </div>
 
           <div className="header-actions">
-            <div style={{ position: 'relative' }}>
-              <button className="icon-btn" onClick={() => setShowNotif(!showNotif)} id="notif-btn">
-                <Icon d={icons.bell} size={18} />
-                <span className="notif-dot" />
-              </button>
-              {showNotif && (
-                <div className="notif-dropdown">
-                  <div className="notif-header">Bildirimler</div>
-                  {[
-                    { icon: '⚠️', text: 'Domates stoku kritik seviyede', time: '5dk önce' },
-                    { icon: '📦', text: 'Migros siparişi onay bekliyor', time: '30dk önce' },
-                    { icon: '🤖', text: 'AI anomali raporu hazır',        time: '1s önce'  },
-                  ].map((n, i) => (
-                    <div key={i} className="notif-item">
-                      <span style={{ fontSize: 16 }}>{n.icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <div className="notif-text">{n.text}</div>
-                        <div className="notif-time">{n.time}</div>
-                      </div>
-                    </div>
-                  ))}
-                  <div className="notif-footer">
-                    <button>Tümünü gör</button>
-                  </div>
-                </div>
-              )}
-            </div>
+            <NotifBell />
           </div>
         </header>
 
@@ -362,7 +349,7 @@ export default function DashboardPage() {
             <div className="section-block-header">
               <span className="section-block-icon">📊</span>
               <h3>Güncel Durum</h3>
-              <span className="section-block-date">{summary?.date ?? '—'}</span>
+              <span className="section-block-date">{summary ? parseTrDate(summary.date) : '—'}</span>
             </div>
             {loading ? (
               <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Veriler yükleniyor…</div>
@@ -440,7 +427,6 @@ export default function DashboardPage() {
                     <strong>Bereket Salça Atölyesi</strong>
                     <span>Salça Üretimi İçin Uygun</span>
                   </div>
-                  <button className="stk-widget-action" onClick={(e) => { e.stopPropagation(); alert('Bereket Salça Atölyesine mesaj gönderiliyor...'); }}>İletişime Geç</button>
                 </div>
               </div>
 
@@ -459,7 +445,6 @@ export default function DashboardPage() {
                     <strong>Tatlıcı Şirin Kooperatifi</strong>
                     <span>Reçel Üretimi İçin Uygun</span>
                   </div>
-                  <button className="stk-widget-action" onClick={(e) => { e.stopPropagation(); alert('Tatlıcı Şirin Kooperatifine mesaj gönderiliyor...'); }}>İletişime Geç</button>
                 </div>
               </div>
             </div>
@@ -522,30 +507,37 @@ export default function DashboardPage() {
             <div className="ai-ozet-card">
               <div className="ai-ozet-baslik">
                 <span className="ai-chip">AI · Gemini</span>
-                <span className="ai-ozet-title">Günlük AI Analizi — {summary?.date ?? '—'}</span>
+                <span className="ai-ozet-title">Günlük AI Analizi — {summary ? parseTrDate(summary.date) : '—'}</span>
               </div>
-              <ul className="ai-ozet-list">
-                {summary && summary.kpis.critical_stock > 0 && (
-                  <li><span className="ai-bullet">›</span>
-                    Depoda {summary.kpis.critical_stock} ürün kritik stok seviyesinin altında. Öncelikli sipariş gerekiyor.
-                  </li>
-                )}
-                {summary && (
-                  <li><span className="ai-bullet">›</span>
-                    Bugün {summary.kpis.open_orders} açık sipariş var. Talep trendi geçen haftaya göre {summary.kpis.order_trend_pct >= 0 ? '+' : ''}{summary.kpis.order_trend_pct}%.
-                  </li>
-                )}
-                {summary && summary.kpis.open_tasks > 0 && (
-                  <li><span className="ai-bullet">›</span>
-                    {summary.kpis.open_tasks} görev bekliyor. Depo ve operasyon ekibi bilgilendirilmeli.
-                  </li>
-                )}
-                {summary && summary.kpis.harvest_kg_week > 0 && (
-                  <li><span className="ai-bullet">›</span>
-                    Bu hafta {summary.kpis.harvest_kg_week} kg hasat bildirimi yapıldı. Stok güncellemeleri takip edilmeli.
-                  </li>
-                )}
-              </ul>
+
+              {/* Yükleniyor */}
+              {briefLoading && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '4px 0' }}>
+                  {[80, 65, 72].map((w, i) => (
+                    <div key={i} style={{
+                      height: 14, borderRadius: 6, background: 'linear-gradient(90deg,#e8f5e9 25%,#c8e6c9 50%,#e8f5e9 75%)',
+                      backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite',
+                      width: `${w}%`, opacity: 0.7
+                    }} />
+                  ))}
+                </div>
+              )}
+
+              {/* Hata */}
+              {!briefLoading && briefError && (
+                <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '8px 0' }}>
+                  AI özeti şu an alınamadı. Backend çalışıyor mu?
+                </div>
+              )}
+
+              {/* Gerçek AI içeriği */}
+              {!briefLoading && !briefError && brief && (
+                <ul className="ai-ozet-list">
+                  {brief.bullets.map((bullet, i) => (
+                    <li key={i}><span className="ai-bullet">›</span>{bullet}</li>
+                  ))}
+                </ul>
+              )}
             </div>
           </section>
 

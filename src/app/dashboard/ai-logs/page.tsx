@@ -2,7 +2,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './ai-logs.css';
-import { getAILogs } from '@/lib/api/client';
+import { getAILogs, getAgentDecisions, type AgentDecisionItem } from '@/lib/api/client';
+import NotifBell from '../components/NotifBell';
+
+const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+function todayTr(): string { const n = new Date(); return `${n.getDate()} ${TR_MONTHS[n.getMonth()]} ${n.getFullYear()}`; }
 
 const Icon = ({ d, size = 18, extra = '' }: { d: string | string[]; size?: number; extra?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={extra}>
@@ -19,7 +23,9 @@ const icons: Record<string, string | string[]> = {
   alert:    ['M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z','M12 9v4','M12 17h.01'],
   brain:    'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z',
   log:      ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z','M14 2v6h6','M16 13H8','M16 17H8','M10 9H8'],
+  phone:    ['M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z'],
   chevron:  'M9 18l6-6-6-6',
+  shift:     ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2','M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z','M23 21v-2a4 4 0 0 0-3-3.87','M16 3.13a4 4 0 0 1 0 7.75'],
   logout:   ['M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4','M16 17l5-5-5-5','M21 12H9'],
   bell:     ['M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9','M13.73 21a2 2 0 0 1-3.46 0'],
   search:   ['M11 17.25a6.25 6.25 0 1 0 0-12.5 6.25 6.25 0 0 0 0 12.5z','M16 16l3.5 3.5'],
@@ -36,49 +42,25 @@ const navItems = [
   { id: 'anomali',     label: 'Anomali',           icon: 'alert',     path: '/dashboard/anomali' },
   { id: 'ai-raporlar', label: 'AI Raporları',      icon: 'brain',     path: '/dashboard/ai-raporlar' },
   { id: 'ai-logs',     label: 'AI Logs',           icon: 'log',       path: '/dashboard/ai-logs' },
-];
-
-const warningsData = [
-  { id: 1, seviye: 'kritik', kaynak: 'Depo / Stok', baslik: 'Domates Stoku Tükendi', detay: 'Kritik eşik aşıldı. Bekleyen 3 sipariş risk altında. Acil tedarik gerekiyor.', icon: 'alert' },
-  { id: 2, seviye: 'yuksek', kaynak: 'Finansal', baslik: 'Ödeme Gecikmesi', detay: 'Migros Market ödemesi 3 gün gecikti. Nakit akışında sapma öngörülüyor.', icon: 'dollar' },
-  { id: 3, seviye: 'orta', kaynak: 'STK Risk', baslik: 'İncir Raf Ömrü', detay: 'Depodaki 45 kg incirin raf ömrünün bitmesine 2 gün kaldı. İsraf riski.', icon: 'warehouse' },
-];
-
-const initialAiActingData = [
-  { 
-    id: 1, saat: '09:15', tarih: '10 Mayıs 2026', baslik: 'Sipariş Otomatik Onaylandı', kategori: 'Talep Yönetimi', 
-    detay_ne: "Migros Market'in 200 kg domates siparişi sistem tarafından otomatik onaylandı.", 
-    detay_neden: 'Müşteri güven skorunun yüksek olması ve deponun planlanan kapasitede talebi karşılayabilecek olması.', 
-    detay_veri: 'Geçmiş 50 siparişte %100 başarılı teslimat ve %98 zamanında ödeme skoru baz alındı.', 
-    detay_etki: 'Manuel onay bekleme süresi ortadan kalktı, operasyon ve teslimat süreci 4 saat erkene alındı.' 
-  },
-  { 
-    id: 2, saat: '08:42', tarih: '10 Mayıs 2026', baslik: 'Kardeş Üretici Teklifi İletildi', kategori: 'STK ve İsraf Önleme', 
-    detay_ne: 'Bereket Salça Atölyesine 120 kg STK riski olan domates için otomatik teklif gönderildi.', 
-    detay_neden: 'Ürünlerin raf ömrünün dolmak üzere olması ve sistemdeki atölyenin salçalık domates ihtiyacının tespit edilmesi.', 
-    detay_veri: 'Stok yaşlandırma analizi ve güncel kardeş üretici talep eşleştirme algoritması sonuçları.', 
-    detay_etki: 'Olası 120 kg ürün israfı önlendi ve kooperatif dayanışmasıyla geri kazanıma yönlendirildi.' 
-  },
-  { 
-    id: 3, saat: '07:30', tarih: '10 Mayıs 2026', baslik: 'Günlük Yönetim Raporu Hazırlandı', kategori: 'Raporlama', 
-    detay_ne: 'Dünün işlem özeti ve bugünün tahmini iş yükü derlenerek ana ekrana yansıtıldı.', 
-    detay_neden: 'Yöneticinin güne veriye dayalı başlamasını sağlamak ve anlık kararlara zemin hazırlamak.', 
-    detay_veri: 'Sistemde gerçekleşen son 24 saatlik işlemler, aktif talepler ve bölgesel pazar fiyat eğilimleri.', 
-    detay_etki: 'Veri madenciliği sayesinde karar alma süreci hızlandırıldı, operasyonel hedefler netleştirildi.' 
-  },
+  { id: 'vardiye',      label: 'Vardiye',           icon: 'shift',     path: '/dashboard/vardiye' },
+  { id: 'uretici-mesaj', label: 'Üretici Mesaj',  icon: 'phone',     path: '/dashboard/uretici-mesaj' },
 ];
 
 export default function AILogsPage() {
   const router = useRouter();
   const [activeNav, setActiveNav] = useState('ai-logs');
-  const [showNotif, setShowNotif] = useState(false);
-  const [aiActing, setAiActing] = useState<any[]>(initialAiActingData);
+  const [aiActing, setAiActing] = useState<any[]>([]);
+  const [aiActingLoading, setAiActingLoading] = useState(true);
+  const [decisions, setDecisions] = useState<AgentDecisionItem[]>([]);
+  const [decisionsLoading, setDecisionsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'logs' | 'decisions'>('logs');
 
   useEffect(() => {
+    // AI işlem logları
     getAILogs()
       .then(data => {
         if (data.actions && data.actions.length > 0) {
-          const formatted = data.actions.map((item) => ({
+          setAiActing(data.actions.map(item => ({
             id: item.id,
             saat: item.time,
             tarih: new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }),
@@ -86,13 +68,18 @@ export default function AILogsPage() {
             kategori: item.ctx?.join(' · ') || 'Genel',
             detay_ne: item.title,
             detay_neden: item.why,
-            detay_veri: `Güven skoru: %${item.confidence}. ${item.impact}`,
-            detay_etki: item.impact,
-          }));
-          setAiActing(formatted);
+            detay_veri: item.ctx?.join(' · ') || '—',
+            detay_etki: item.impact || '—',
+          })));
         }
       })
-      .catch(err => console.error('AI Logs çekilemedi:', err));
+      .catch(err => console.error('AI Logs çekilemedi:', err))
+      .finally(() => setAiActingLoading(false));
+
+    getAgentDecisions(100)
+      .then(data => setDecisions(data.items))
+      .catch(console.error)
+      .finally(() => setDecisionsLoading(false));
   }, []);
 
   const navClick = (item: typeof navItems[0]) => {
@@ -142,7 +129,6 @@ export default function AILogsPage() {
             <div className="avatar">ÜK</div>
             <div className="user-chip-text">
               <h4>Üreten Kadınlar</h4>
-              <p>Admin Paneli</p>
             </div>
           </div>
           <button className="logout-btn" onClick={() => router.push('/login')}>
@@ -158,64 +144,122 @@ export default function AILogsPage() {
           <div className="header-coop-title">
             <span style={{ fontSize: 22 }}>🤖</span>
             <div>
-              <h2 className="header-coop-name">AI Logs & Erken Uyarı Sistemi</h2>
-              <p className="header-coop-sub">Yapay Zeka İşlem Kayıtları ve Risk Analizleri · 10 Mayıs 2026</p>
+              <h2 className="header-coop-name">AI Logs</h2>
+              <p className="header-coop-sub">Yapay Zeka İşlem Kayıtları ve Ajan Kararları · {todayTr()}</p>
             </div>
           </div>
-          <div className="search-box">
-            <Icon d={icons.search} size={15} />
-            <input type="text" placeholder="Log, uyarı veya işlem ara…" />
-          </div>
-          <div className="header-actions">
-            <div style={{ position: 'relative' }}>
-              <button className="icon-btn" onClick={() => setShowNotif(!showNotif)} id="notif-btn">
-                <Icon d={icons.bell} size={18} />
-              </button>
-            </div>
-          </div>
+          <div className="header-actions"><NotifBell /></div>
         </header>
 
         {/* Content */}
         <div className="content">
+
+          {/* Tab bar */}
+          <div className="logs-tab-bar">
+            <button
+              className={`logs-tab${activeTab === 'logs' ? ' logs-tab-active' : ''}`}
+              onClick={() => setActiveTab('logs')}
+            >
+              🤖 AI İşlem Kayıtları
+              <span className="logs-tab-count">{aiActing.length}</span>
+            </button>
+            <button
+              className={`logs-tab${activeTab === 'decisions' ? ' logs-tab-active' : ''}`}
+              onClick={() => setActiveTab('decisions')}
+            >
+              📋 Ajan Kararları
+              <span className="logs-tab-count">{decisions.length}</span>
+            </button>
+          </div>
+
+          {/* ── Ajan Kararları Tab ── */}
+          {activeTab === 'decisions' && (
+            <div className="decisions-panel">
+              <div className="decisions-header-row">
+                <div>
+                  <h3>Ajan Kararları</h3>
+                  <p>Teklif gönderme, depo görevi, WhatsApp hasat onayı gibi tüm ajan aksiyonları</p>
+                </div>
+              </div>
+
+              {decisionsLoading && (
+                <div className="decisions-loading">Yükleniyor…</div>
+              )}
+
+              {!decisionsLoading && decisions.length === 0 && (
+                <div className="decisions-empty">
+                  <span>📋</span>
+                  <p>Henüz kayıtlı ajan kararı yok.</p>
+                </div>
+              )}
+
+              {!decisionsLoading && decisions.length > 0 && (
+                <div className="decisions-table-wrap">
+                  <table className="decisions-table">
+                    <thead>
+                      <tr>
+                        <th>Zaman</th>
+                        <th>Ajan</th>
+                        <th>Karar</th>
+                        <th>Açıklama</th>
+                        <th>Tetikleyen</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {decisions.map(d => (
+                        <tr key={d.id}>
+                          <td className="td-time">
+                            <span className="td-saat">{d.saat}</span>
+                            <span className="td-tarih">{d.tarih}</span>
+                          </td>
+                          <td>
+                            <span className="td-ajan">
+                              {d.ajan_icon} {d.ajan_label}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`td-karar karar-${d.karar}`}>
+                              {d.karar_label}
+                            </span>
+                          </td>
+                          <td className="td-aciklama">{d.aciklama}</td>
+                          <td className="td-tetikleyen">{d.tetikleyen}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Mevcut Logs Tab ── */}
+          {activeTab === 'logs' && (
           <div className="ai-logs-layout">
 
-            {/* 1. Uyarılar (Erken Uyarı Sistemi) */}
-            <section className="ai-logs-panel">
-              <div className="panel-header warning-header">
-                <Icon d={icons.alert} size={18} />
-                <h3>Uyarılar (Erken Uyarı Sistemi)</h3>
-                <span className="panel-badge red">Aktif: {warningsData.length} Risk</span>
-              </div>
-              <div className="warnings-grid">
-                {warningsData.map(uyari => (
-                  <div key={uyari.id} className={`warning-card ${uyari.seviye}`}>
-                    <div className="warning-card-top">
-                      <div className="warning-icon">
-                        <Icon d={icons[uyari.icon] || icons.info} size={20} />
-                      </div>
-                      <div className="warning-info">
-                        <strong>{uyari.baslik}</strong>
-                        <p>{uyari.detay}</p>
-                      </div>
-                    </div>
-                    <span className="warning-source">{uyari.kaynak}</span>
-                    <div className="warning-actions">
-                      <button className="btn-warning-action">
-                        <Icon d={icons.search} size={14} /> Detay İncele
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            {/* 2. AI Acting (Şeffaf İşlem Kayıtları) */}
+            {/* AI Acting (Şeffaf İşlem Kayıtları) */}
             <section className="ai-logs-panel">
               <div className="panel-header acting-header">
                 <Icon d={icons.brain} size={18} />
                 <h3>AI Acting (Yapay Zeka Otonom İşlemleri)</h3>
-                <span className="panel-badge blue">Son 24 Saat: {aiActing.length} İşlem</span>
+                {!aiActingLoading && (
+                  <span className="panel-badge blue">Son 24 Saat: {aiActing.length} İşlem</span>
+                )}
               </div>
+
+              {aiActingLoading && (
+                <div className="warnings-loading">
+                  <div className="warn-sk" /><div className="warn-sk" />
+                </div>
+              )}
+
+              {!aiActingLoading && aiActing.length === 0 && (
+                <div className="warnings-empty">
+                  <span>📋</span>
+                  <p>Son 24 saatte kayıtlı AI işlemi yok.</p>
+                </div>
+              )}
+
               <div className="acting-list">
                 {aiActing.map(log => (
                   <div key={log.id} className="acting-item">
@@ -253,6 +297,8 @@ export default function AILogsPage() {
             </section>
 
           </div>
+          )} {/* end logs tab */}
+
         </div>
       </main>
     </div>

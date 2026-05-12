@@ -1,5 +1,5 @@
 from __future__ import annotations
-from datetime import date
+from datetime import date, timedelta
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from database import get_supabase
@@ -27,9 +27,23 @@ async def dashboard_summary():
         "id, is_name, durum, oncelik"
     ).execute()
 
+    # ── Haftalık hasat (onaylanan teslimler) ────────────────────
+    week_ago = (date.today() - timedelta(days=7)).isoformat()
+    harvest_res = sb.table("pending_approvals").select(
+        "kabul_miktari, talep_miktari, olusturuldu, durum"
+    ).eq("durum", "onaylandi").gte("olusturuldu", week_ago).execute()
+
+    # ── Sipariş trendi (bu hafta vs geçen hafta sayısı) ─────────
+    two_weeks_ago = (date.today() - timedelta(days=14)).isoformat()
+    orders_trend_res = sb.table("requests").select(
+        "id, tarih"
+    ).gte("tarih", two_weeks_ago).execute()
+
     products = products_res.data or []
     requests = requests_res.data or []
     tasks = tasks_res.data or []
+    harvest_approved = harvest_res.data or []
+    orders_trend_all = orders_trend_res.data or []
 
     # ── Stok hesapla ─────────────────────────────────────────────
     stock_items = []
@@ -58,6 +72,18 @@ async def dashboard_summary():
     critical_count = sum(1 for s in stock_items if s["is_critical"])
     open_tasks = [t for t in tasks if not t.get("durum")]
 
+    # ── Büyük market isimlerini gerçekçi müşterilere çevir ──────
+    MUSTERI_MAP = {
+        "Migros Market":       "Çukurova Restoran",
+        "BİM Market":          "Elif Hanım Mutfağı",
+        "A101 Market":         "Lezzet Lokantası",
+        "Organik Pazar":       "Doğal Gıda Dükkânı",
+        "Tarım Kooperatifi":   "Akdeniz Üreticiler Birliği",
+    }
+
+    def normalize_musteri(ad: str) -> str:
+        return MUSTERI_MAP.get(ad, ad)
+
     # ── Siparişleri formatla ─────────────────────────────────────
     def urgency(durum: str) -> str:
         if durum in ("gecikti", "gecikmiş"):
@@ -69,7 +95,7 @@ async def dashboard_summary():
     formatted_orders = [
         {
             "id": str(r["id"]),
-            "customer": r.get("musteri", ""),
+            "customer": normalize_musteri(r.get("musteri", "")),
             "product": r.get("urun", ""),
             "quantity": r.get("miktar", ""),
             "unit": "kg",
@@ -92,19 +118,172 @@ async def dashboard_summary():
         for t in tasks[:5]
     ]
 
+    # ── Haftalık hasat toplamı (kg) ──────────────────────────────
+    harvest_kg_week = 0.0
+    for h in harvest_approved:
+        val = h.get("kabul_miktari") or h.get("talep_miktari") or 0
+        try:
+            harvest_kg_week += float(str(val).split()[0])
+        except (ValueError, TypeError):
+            pass
+
+    # ── Sipariş trendi hesapla ───────────────────────────────────
+    this_week_orders = sum(
+        1 for r in orders_trend_all
+        if (r.get("tarih") or "") >= week_ago
+    )
+    last_week_orders = sum(
+        1 for r in orders_trend_all
+        if two_weeks_ago <= (r.get("tarih") or "") < week_ago
+    )
+    if last_week_orders > 0:
+        order_trend_pct = round(((this_week_orders - last_week_orders) / last_week_orders) * 100)
+    elif this_week_orders > 0:
+        order_trend_pct = 100
+    else:
+        order_trend_pct = 0
+
     return {
         "date": today,
         "kpis": {
             "open_orders": len(open_requests),
-            "order_trend_pct": 0,
+            "order_trend_pct": order_trend_pct,
             "critical_stock": critical_count,
             "open_tasks": len(open_tasks),
-            "harvest_kg_week": 0,
+            "harvest_kg_week": round(harvest_kg_week),
         },
-        "stock": stock_items[:8],
+        "stock": stock_items[:8],   # Ana sayfa widget'ı için ilk 8 (kritikler önce)
         "orders": formatted_orders,
         "tasks": formatted_tasks,
         "trends": {"up": [], "down": []},
+    }
+
+
+@router.get("/stock/all")
+async def all_stock():
+    """Depo sayfası için tüm ürünleri döndürür (limit yok)."""
+    sb = get_supabase()
+    products_res = sb.table("products").select(
+        "id, emoji, ad, mevcut_kg, kapasite_kg, kategori"
+    ).order("ad").execute()
+
+    products = products_res.data or []
+    stock_items = []
+    for p in products:
+        current  = p.get("mevcut_kg") or 0
+        capacity = p.get("kapasite_kg") or 1
+        pct      = round((current / capacity) * 100) if capacity > 0 else 100
+        tier     = "urgent" if pct < 15 else "warn" if pct < 30 else "good"
+        stock_items.append({
+            "id":          str(p["id"]),
+            "name":        f"{p.get('emoji', '')} {p.get('ad', '')}".strip(),
+            "unit":        "kg",
+            "current":     current,
+            "capacity":    capacity,
+            "pct":         pct,
+            "tier":        tier,
+            "is_critical": current <= capacity * 0.25,
+            "kategori":    p.get("kategori", ""),
+        })
+
+    stock_items.sort(key=lambda x: x["pct"])
+    return stock_items
+
+
+@router.get("/trends")
+async def demand_trends():
+    """
+    Son 14 günün sipariş verisinden haftalık talep trendi hesaplar.
+    Bu hafta vs geçen haftayı karşılaştırır.
+    """
+    from collections import defaultdict
+    from datetime import timedelta
+
+    today      = date.today()
+    week_start = (today - timedelta(days=7)).isoformat()
+    prev_start = (today - timedelta(days=14)).isoformat()
+
+    sb = get_supabase()
+
+    def _parse_miktar(val) -> float:
+        """'40 kg' veya 40 → float"""
+        if val is None:
+            return 0.0
+        try:
+            return float(str(val).split()[0])
+        except (ValueError, IndexError):
+            return 0.0
+
+    try:
+        this_res = (
+            sb.table("requests")
+            .select("urun, miktar")
+            .gte("tarih", week_start)
+            .execute()
+        )
+        prev_res = (
+            sb.table("requests")
+            .select("urun, miktar")
+            .gte("tarih", prev_start)
+            .lt("tarih", week_start)
+            .execute()
+        )
+    except Exception:
+        return {"date": today.isoformat(), "up": [], "down": []}
+
+    this_week = this_res.data or []
+    last_week  = prev_res.data or []
+
+    this_totals: dict[str, float] = defaultdict(float)
+    last_totals: dict[str, float] = defaultdict(float)
+
+    for r in this_week:
+        p = (r.get("urun") or "").strip()
+        if p:
+            this_totals[p] += _parse_miktar(r.get("miktar"))
+    for r in last_week:
+        p = (r.get("urun") or "").strip()
+        if p:
+            last_totals[p] += _parse_miktar(r.get("miktar"))
+
+    trends_up:   list[dict] = []
+    trends_down: list[dict] = []
+
+    all_products = set(list(this_totals) + list(last_totals))
+    for p in all_products:
+        if not p:
+            continue
+        this_val = this_totals.get(p, 0.0)
+        last_val = last_totals.get(p, 0.0)
+        if this_val == 0 and last_val == 0:
+            continue
+
+        if last_val == 0:
+            pct = 100.0
+        else:
+            pct = ((this_val - last_val) / last_val) * 100
+
+        item = {
+            "name":          p,
+            "delta":         f"+%{abs(pct):.0f}" if pct >= 0 else f"-%{abs(pct):.0f}",
+            "pct":           round(pct, 1),
+            "up":            pct > 0,
+            "this_week_kg":  round(this_val, 1),
+            "last_week_kg":  round(last_val, 1),
+        }
+
+        if pct >= 5:
+            trends_up.append(item)
+        elif pct <= -5:
+            trends_down.append(item)
+
+    trends_up.sort(key=lambda x: -x["pct"])
+    trends_down.sort(key=lambda x: x["pct"])
+
+    return {
+        "date": today.isoformat(),
+        "up":   trends_up[:6],
+        "down": trends_down[:6],
     }
 
 

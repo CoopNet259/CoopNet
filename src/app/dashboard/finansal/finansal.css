@@ -66,8 +66,12 @@
 .finansal-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto auto;
   gap: 20px;
+}
+
+/* Dünün Raporu — tam genişlik (tek panel üst satırda) */
+.finansal-layout > section:first-child {
+  grid-column: 1 / -1;
 }
 
 .finansal-panel {
@@ -324,6 +328,56 @@
 
 .trend-badge.up { background: var(--green-100); color: var(--green-700); }
 .trend-badge.down { background: var(--red-100); color: var(--red-600); }
+
+/* Shimmer skeleton */
+@keyframes fin-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.fin-shimmer {
+  background: linear-gradient(90deg, var(--grey-100) 25%, var(--grey-200) 50%, var(--grey-100) 75%);
+  background-size: 800px 100%;
+  animation: fin-shimmer 1.4s infinite linear;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+/* Refresh button */
+.fin-refresh-btn {
+  width: 36px; height: 36px;
+  background: var(--grey-50);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--grey-500); cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.fin-refresh-btn:hover { background: var(--green-100); color: var(--green-700); }
+
+/* Error banner */
+.fin-error-banner {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 24px;
+  background: var(--red-100); color: var(--red-600);
+  font-size: 13px; font-weight: 600;
+  border-bottom: 1px solid #fca5a5;
+}
+.fin-error-banner button {
+  margin-left: auto;
+  background: var(--red-600); color: #fff;
+  border: none; border-radius: var(--radius-sm);
+  padding: 4px 12px; font-size: 12px; cursor: pointer;
+}
+
+/* Empty state */
+.fin-empty {
+  font-size: 13px; color: var(--grey-400);
+  text-align: center; padding: 20px 0;
+}
+
+/* badge colors */
+.panel-badge.green  { background: var(--green-100); color: var(--green-700); }
+.panel-badge.gold   { background: var(--gold-100);  color: var(--gold-500);  }
 
 /* Responsive */
 @media(max-width:1100px) {

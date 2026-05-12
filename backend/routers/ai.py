@@ -18,6 +18,65 @@ from services.logger import log_ai
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
+# ── Günlük cache (bellekte, aynı gün ikinci istek anında döner) ──
+_dashboard_cache: dict[str, dict] = {}
+
+
+# ── GET /api/ai/dashboard-brief ──────────────────────────────────
+
+DASHBOARD_BRIEF_SYSTEM = """Sen CoopNet AI'sın. Kooperatif yöneticisi için çok kısa, eyleme dönüştürülebilir bir sabah özeti yaz.
+
+Tam olarak 3 madde yaz. Her madde tek cümle, rakam içersin. Maddeleri düz metin olarak yaz, başlık veya markdown kullanma.
+Türkçe yaz."""
+
+
+@router.get("/dashboard-brief")
+async def dashboard_brief():
+    today = date_type.today().isoformat()
+
+    # Aynı gün için cache varsa anında dön
+    if today in _dashboard_cache:
+        return _dashboard_cache[today]
+
+    try:
+        ctx = await build_daily_context(today)
+        model = get_model(system_instruction=DASHBOARD_BRIEF_SYSTEM)
+
+        critical_names = ", ".join(i["name"] for i in ctx["inventory"] if i["is_critical"]) or "yok"
+        open_orders = ctx["orders"]["pending"]
+        total_orders = ctx["orders"]["total"]
+        done_tasks = ctx["tasks"]["done"]
+        total_tasks = ctx["tasks"]["total"]
+
+        prompt = f"""Kooperatif bugünkü durumu:
+- Açık sipariş: {open_orders} / toplam {total_orders}
+- Kritik stok ürünler: {critical_names}
+- Tamamlanan görev: {done_tasks}/{total_tasks}
+- Bekleyen hasat bildirimi: {len(ctx['harvests'])} adet
+
+Yukarıdaki verilere göre yöneticiye 3 kısa öneri/bilgi yaz."""
+
+        result = await asyncio.to_thread(model.generate_content, prompt)
+        lines = [
+            ln.lstrip("•-–*123456789. ").strip()
+            for ln in result.text.strip().splitlines()
+            if ln.strip() and not ln.strip().startswith("#")
+        ]
+        bullets = [ln for ln in lines if len(ln) > 10][:3]
+
+        response = {"date": today, "bullets": bullets, "cached": False}
+        _dashboard_cache[today] = {**response, "cached": True}
+        log_ai("daily_summary", f"dashboard_brief_{today}", {"summary": " | ".join(bullets)})
+        return response
+
+    except Exception as exc:
+        msg = str(exc)
+        is_rl = "429" in msg or "quota" in msg.lower()
+        raise HTTPException(
+            status_code=429 if is_rl else 500,
+            detail="AI şu an yoğun." if is_rl else "Özet oluşturulamadı."
+        )
+
 
 # ── POST /api/ai/chat ─────────────────────────────────────────
 
@@ -36,7 +95,7 @@ async def chat(req: ChatRequest):
 
 # ── POST /api/ai/daily-summary ────────────────────────────────
 
-DAILY_SUMMARY_SYSTEM = """Sen CoopFlow AI'sın. Kooperatif yöneticisi için günlük operasyon özeti yaz.
+DAILY_SUMMARY_SYSTEM = """Sen CoopNet AI'sın. Kooperatif yöneticisi için günlük operasyon özeti yaz.
 
 Format — tam olarak bu üç başlıkla:
 ## Bugün Ne Oldu
@@ -101,7 +160,7 @@ Hasat bildirimleri:
 
 # ── POST /api/ai/draft-email ──────────────────────────────────
 
-DRAFT_EMAIL_SYSTEM = """Sen CoopFlow AI'sın. Kooperatif adına tedarikçiye gönderilecek Türkçe sipariş e-postası yaz.
+DRAFT_EMAIL_SYSTEM = """Sen CoopNet AI'sın. Kooperatif adına tedarikçiye gönderilecek Türkçe sipariş e-postası yaz.
 
 SADECE şu JSON formatında yanıt ver:
 {
@@ -113,7 +172,7 @@ SADECE şu JSON formatında yanıt ver:
 Kurallar:
 - Resmi ve kısa üslup
 - suggested_quantity: mevcut miktarın 3 katı kadar öner (deponu dolduracak kadar)
-- İmzayı "CoopFlow Kooperatif Yönetim Sistemi" olarak yaz
+- İmzayı "CoopNet Kooperatif Yönetim Sistemi" olarak yaz
 - Body içinde \\n ile satır geç"""
 
 
@@ -144,7 +203,7 @@ async def draft_email(req: DraftEmailRequest):
 
 # ── POST /api/ai/draft-notification ──────────────────────────
 
-DRAFT_NOTIF_SYSTEM = """Sen CoopFlow AI'sın. Kooperatif müşteri temsilcisi adına müşteriye gönderilecek bildirim mesajı yaz.
+DRAFT_NOTIF_SYSTEM = """Sen CoopNet AI'sın. Kooperatif müşteri temsilcisi adına müşteriye gönderilecek bildirim mesajı yaz.
 
 SADECE şu JSON formatında yanıt ver:
 {
@@ -264,8 +323,7 @@ async def ai_logs(
             "why": log.get("detay_neden") or log.get("mesaj", ""),
             "ctx": kategori_ctx(log.get("kategori", "")),
             "status": "success",
-            "confidence": 92,
-            "impact": log.get("detay_etki") or "iş akışına dahil edildi",
+            "impact": log.get("detay_etki") or "",
         }
         for log in all_logs
         if log.get("tip") in ("Rapor", "Otomasyon", "Aksiyon")
@@ -285,7 +343,7 @@ async def ai_logs(
 
 # ── POST /api/ai/weekly-insight ───────────────────────────────
 
-WEEKLY_INSIGHT_SYSTEM = """Sen CoopFlow AI'sın. Kooperatif yöneticisi için haftalık gidişat özeti yaz.
+WEEKLY_INSIGHT_SYSTEM = """Sen CoopNet AI'sın. Kooperatif yöneticisi için haftalık gidişat özeti yaz.
 
 SADECE şu JSON formatında yanıt ver:
 {
@@ -305,10 +363,12 @@ Kurallar:
 
 
 def _get_monday() -> str:
+    """Geçen haftanın pazartesisini döner — haftalık rapor tamamlanmış veriyi göstermeli."""
     today = date_type.today()
     days_since_monday = today.weekday()
-    monday = today - timedelta(days=days_since_monday)
-    return monday.isoformat()
+    this_monday = today - timedelta(days=days_since_monday)
+    last_monday = this_monday - timedelta(days=7)
+    return last_monday.isoformat()
 
 
 @router.post("/weekly-insight")
@@ -318,34 +378,76 @@ async def weekly_insight(req: WeeklyInsightRequest):
     week_end = week_end_dt.isoformat()
 
     sb = get_supabase()
-    try:
-        # requests tablosu: musteri, urun, miktar, saat, durum
-        orders_res = sb.table("requests").select("durum, miktar, urun").execute()
-        orders = orders_res.data or []
-        total_orders = len(orders)
-        delivered = sum(1 for o in orders if o.get("durum") == "teslim edildi")
-        delayed = sum(1 for o in orders if o.get("durum") in ("gecikti", "gecikmiş"))
-        fulfillment_rate = round((delivered / total_orders) * 100) if total_orders > 0 else 0
 
-        # products tablosu: ad, mevcut_kg, kapasite_kg
-        products_res = sb.table("products").select("ad, mevcut_kg, kapasite_kg").execute()
+    # ── Gerçek haftalık veri — tarih filtreli ──────────────────
+    try:
+        orders_res = (
+            sb.table("requests")
+            .select("durum, miktar, urun, musteri, tarih")
+            .gte("tarih", week_start)
+            .lt("tarih", week_end)
+            .execute()
+        )
+        orders = orders_res.data or []
+    except Exception:
+        orders = []
+
+    total_orders = len(orders)
+    delivered = sum(1 for o in orders if o.get("durum") in ("teslim edildi", "tamamlandi"))
+    delayed   = sum(1 for o in orders if o.get("durum") in ("gecikti", "gecikmiş"))
+    fulfillment_rate = round((delivered / total_orders) * 100) if total_orders > 0 else 0
+
+    def _parse_kg(val) -> float:
+        try: return float(str(val).split()[0])
+        except: return 0.0
+
+    total_kg = sum(_parse_kg(o.get("miktar")) for o in orders)
+
+    # Ürün bazında haftalık hacim
+    from collections import defaultdict
+    urun_totals: dict[str, float] = defaultdict(float)
+    for o in orders:
+        u = (o.get("urun") or "").strip()
+        if u:
+            urun_totals[u] += _parse_kg(o.get("miktar"))
+    top_products = sorted(urun_totals.items(), key=lambda x: -x[1])[:3]
+
+    # Kritik stok
+    try:
+        products_res = sb.table("products").select("ad, emoji, mevcut_kg, kapasite_kg").execute()
         critical_items = []
         for p in (products_res.data or []):
-            current = p.get("mevcut_kg") or 0
+            current  = p.get("mevcut_kg") or 0
             capacity = p.get("kapasite_kg") or 1
             if current <= capacity * 0.25:
                 critical_items.append({"name": p.get("ad", ""), "current": current, "unit": "kg"})
+    except Exception:
+        critical_items = []
 
-        context_text = f"""Hafta: {week_start} – {week_end}
+    # ── Temel istatistik yanıtı (AI başarısız olsa bile döner) ──
+    base_stats = {
+        "total_orders":     total_orders,
+        "delivered_orders": delivered,
+        "delayed_orders":   delayed,
+        "fulfillment_rate": fulfillment_rate,
+        "total_kg":         round(total_kg, 1),
+        "top_products":     [{"name": n, "kg": round(kg, 1)} for n, kg in top_products],
+        "critical_items":   critical_items,
+    }
 
-Sipariş özeti:
-- Toplam: {total_orders}
+    context_text = f"""Hafta: {week_start} – {week_end}
+
+Sipariş özeti ({total_orders} sipariş, {round(total_kg)} kg toplam):
 - Teslim edildi: {delivered} (%{fulfillment_rate} karşılama)
 - Gecikmiş: {delayed}
+- En çok talep gören ürünler: {', '.join(f"{n} ({round(kg)} kg)" for n, kg in top_products) or "veri yok"}
 
-Kritik stok durumu ({len(critical_items)} ürün):
-{chr(10).join(f"- {i['name']}: {i['current']} {i['unit']} (kritik eşiğin altında)" for i in critical_items) or "- Kritik stok yok"}"""
+Kritik stok ({len(critical_items)} ürün):
+{chr(10).join(f"- {i['name']}: {i['current']} kg" for i in critical_items) or "- Kritik stok yok"}"""
 
+    # ── AI kısmı — başarısız olursa istatistikleri yine de döndür ──
+    ai_output: dict = {}
+    try:
         model = get_model(system_instruction=WEEKLY_INSIGHT_SYSTEM)
         result = await asyncio.to_thread(
             model.generate_content,
@@ -353,30 +455,38 @@ Kritik stok durumu ({len(critical_items)} ürün):
             generation_config={"response_mime_type": "application/json"},
         )
         ai_output = json.loads(result.text)
-
-        response = {
-            "week_start": week_start,
-            "week_end": week_end,
-            "stats": {
-                "total_orders": total_orders,
-                "delivered_orders": delivered,
-                "delayed_orders": delayed,
-                "fulfillment_rate": fulfillment_rate,
-                "demand_trend_pct": 0,
-                "critical_items": critical_items,
-            },
-            "insight": ai_output.get("insight", ""),
-            "highlights": ai_output.get("highlights", []),
-            "recommended_actions": ai_output.get("recommended_actions", []),
-            "week_score": ai_output.get("week_score"),
+    except Exception:
+        # AI yoksa istatistik tabanlı otomatik özet üret
+        ai_output = {
+            "insight": (
+                f"{week_start} – {week_end} haftasında {total_orders} sipariş işlendi, "
+                f"{round(total_kg)} kg ürün hareketi gerçekleşti. "
+                f"Karşılama oranı %{fulfillment_rate}."
+            ),
+            "highlights": [
+                f"Toplam {total_orders} sipariş, {round(total_kg)} kg",
+                f"%{fulfillment_rate} karşılama oranı",
+                f"{len(critical_items)} kritik stok kalemi" if critical_items else "Kritik stok sorunu yok",
+            ],
+            "recommended_actions": (
+                [{"tone": "danger", "title": f"{critical_items[0]['name']} kritik", "meta": "Acil tedarik planlanmalı"}]
+                if critical_items else
+                [{"tone": "good", "title": "Stok seviyeleri normal", "meta": "Rutin takip yeterli"}]
+            ),
+            "week_score": min(100, max(0, fulfillment_rate - delayed * 5)),
         }
-        log_ai("weekly_insight", f"weekly_insight_{week_start}", response)
-        return response
 
-    except Exception as exc:
-        msg = str(exc)
-        is_rl = "429" in msg or "quota" in msg.lower()
-        raise HTTPException(status_code=429 if is_rl else 500, detail="AI şu an yoğun, lütfen birkaç saniye bekleyip tekrar deneyin." if is_rl else "Haftalık özet oluşturulamadı.")
+    response = {
+        "week_start": week_start,
+        "week_end":   week_end,
+        "stats":      base_stats,
+        "insight":    ai_output.get("insight", ""),
+        "highlights": ai_output.get("highlights", []),
+        "recommended_actions": ai_output.get("recommended_actions", []),
+        "week_score": ai_output.get("week_score"),
+    }
+    log_ai("weekly_insight", f"weekly_insight_{week_start}", response)
+    return response
 
 
 # ── GET /api/ai/reports ───────────────────────────────────────
@@ -386,3 +496,95 @@ async def ai_reports():
     sb = get_supabase()
     res = sb.table("ai_reports").select("*").order("id").execute()
     return res.data or []
+
+
+# ── GET /api/ai/decisions ─────────────────────────────────────
+
+KARAR_LABEL: dict[str, str] = {
+    "otomatik_kabul":         "✅ Otomatik Kabul",
+    "onay_bekleniyor":        "⏳ Onay Bekleniyor",
+    "ihtiyac_yok":            "⛔ İhtiyaç Yok",
+    "teklif_gonderildi":      "📨 Teklif Gönderildi",
+    "manuel_teklif_gonderildi": "📨 Teklif Gönderildi",
+    "depo_gorevi_olusturuldu": "🏭 Depo Görevi",
+    "kardes_uretici_yok":     "⚠️ Kardeş Üretici Yok",
+    "satis_onaylandi":        "✅ Satış Onaylandı",
+    "gorев_olusturuldu":      "🏭 Depo Görevi",
+    "zaman_asimi":            "⏱️ Zaman Aşımı",
+    "reddedildi":             "❌ Reddedildi",
+    "onaylandi":              "✅ Onaylandı",
+}
+
+AJAN_LABEL: dict[str, str] = {
+    "waste_prevention": "İsraf Önleme",
+    "whatsapp_harvest": "WhatsApp Hasat",
+    "approval":         "Onay Sistemi",
+    "stock_check":      "Stok Kontrolü",
+    "morning_briefing": "Sabah Planı",
+    "evening_summary":  "Akşam Özeti",
+}
+
+AJAN_ICON: dict[str, str] = {
+    "waste_prevention": "♻️",
+    "whatsapp_harvest": "📱",
+    "approval":         "✅",
+    "stock_check":      "📦",
+    "morning_briefing": "☀️",
+    "evening_summary":  "🌙",
+}
+
+
+@router.get("/decisions")
+async def ai_decisions(limit: int = Query(50, ge=1, le=200)):
+    """
+    agent_decisions tablosunu döndürür.
+    Talepler sayfasından gönderilen teklifler, depo görevleri,
+    WhatsApp kararları gibi tüm ajan aksiyonları burada toplanır.
+    """
+    sb = get_supabase()
+    res = (
+        sb.table("agent_decisions")
+        .select("*")
+        .order("olusturuldu", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    rows = res.data or []
+
+    items = []
+    for r in rows:
+        ajan      = r.get("ajan", "")
+        karar     = r.get("karar", "")
+        meta      = r.get("meta") or {}
+        olusturuldu = r.get("olusturuldu", "")
+
+        # Zaman formatla
+        try:
+            from datetime import datetime, timezone
+            dt = datetime.fromisoformat(olusturuldu.replace("Z", "+00:00"))
+            dt_local = dt.astimezone()
+            saat = dt_local.strftime("%H:%M")
+            tarih = dt_local.strftime("%d.%m.%Y")
+        except Exception:
+            saat  = ""
+            tarih = ""
+
+        items.append({
+            "id":          r.get("id"),
+            "ajan":        ajan,
+            "ajan_label":  AJAN_LABEL.get(ajan, ajan),
+            "ajan_icon":   AJAN_ICON.get(ajan, "🤖"),
+            "karar":       karar,
+            "karar_label": KARAR_LABEL.get(karar, karar),
+            "aciklama":    r.get("aciklama", ""),
+            "tetikleyen":  r.get("tetikleyen", ""),
+            "meta":        meta,
+            "saat":        saat,
+            "tarih":       tarih,
+            "raw_time":    olusturuldu,
+        })
+
+    return {
+        "total": len(items),
+        "items": items,
+    }

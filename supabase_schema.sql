@@ -91,9 +91,9 @@ ALTER TABLE requests ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow public read access" ON requests FOR SELECT USING (true);
 
 INSERT INTO requests (id, musteri, urun, miktar, saat, durum) VALUES
-(1, 'Migros Market', 'Domates', '200 kg', '09:00', 'bekliyor'),
-(2, 'Tarım Kooperatifi', 'Biber', '80 kg', '11:30', 'onaylandi'),
-(3, 'Organik Pazar', 'Patlıcan', '60 kg', '14:00', 'bekliyor')
+(1, 'Çukurova Restoran', 'Domates', '200 kg', '09:00', 'bekliyor'),
+(2, 'Akdeniz Üreticiler Birliği', 'Biber', '80 kg', '11:30', 'onaylandi'),
+(3, 'Doğal Gıda Dükkânı', 'Patlıcan', '60 kg', '14:00', 'bekliyor')
 ON CONFLICT (id) DO NOTHING;
 
 -- 5. AI LOGS
@@ -119,7 +119,7 @@ INSERT INTO ai_logs (id, zaman, tarih, tip, baslik, mesaj, renk, detay_ne, detay
 (1, '09:14', '10 Mayıs 2026', 'Anomali', 'Domates Stoku Uyarısı', 'Domates stoku kritik seviyenin altına düştü. Acil sipariş önerisi gönderildi.', 'red', NULL, NULL, NULL, NULL, 'Depo'),
 (2, '08:55', '10 Mayıs 2026', 'Tahmin', 'Talep Tahmini', 'Bu hafta biber talebi %18 artış bekleniyor. Üreticilere bildirim yapıldı.', 'gold', NULL, NULL, NULL, NULL, 'Trend'),
 (3, '08:30', '10 Mayıs 2026', 'Rapor', 'Günlük Özet', 'Dün gerçekleşen 14 sipariş için günlük özet raporu oluşturuldu.', 'green', NULL, NULL, NULL, NULL, 'Raporlama'),
-(4, '07:45', '10 Mayıs 2026', 'Otomasyon', 'Otomatik Yanıt', 'Organik Pazar talebine otomatik yanıt taslağı hazırlandı.', 'blue', NULL, NULL, NULL, NULL, 'İletişim')
+(4, '07:45', '10 Mayıs 2026', 'Otomasyon', 'Otomatik Yanıt', 'Doğal Gıda Dükkânı talebine otomatik yanıt taslağı hazırlandı.', 'blue', NULL, NULL, NULL, NULL, 'İletişim')
 ON CONFLICT (id) DO NOTHING;
 
 -- 6. COOPERATIVES (Kooperatif Bilgileri)
@@ -169,11 +169,11 @@ ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow public read access" ON tasks FOR SELECT USING (true);
 
 INSERT INTO tasks (id, is_name, durum, oncelik) VALUES
-(1, 'Migros siparişi için domates temini', false, 'yuksek'),
+(1, 'Çukurova Restoran domates teslimatı', false, 'yuksek'),
 (2, 'Depo stok sayımı yapılacak', false, 'orta'),
 (3, 'Ayşe Demir ile fiyat görüşmesi', true, 'orta'),
 (4, 'Q2 finansal raporu tamamlanacak', false, 'yuksek'),
-(5, 'Organik Pazar sözleşmesi imzalanacak', false, 'dusuk')
+(5, 'Doğal Gıda Dükkânı sözleşmesi imzalanacak', false, 'dusuk')
 ON CONFLICT (id) DO NOTHING;
 
 -- 9. AI REPORTS (AI Analiz Özeti)

@@ -15,7 +15,7 @@ export async function runAgent(
   userMessage: string,
   history: ChatMessage[] = []
 ): Promise<AgentResult> {
-  const systemPrompt = `Sen CoopFlow AI'sın — bir kooperatifin iş akışını yöneten yapay zeka ajanısın.
+  const systemPrompt = `Sen CoopNet AI'sın — bir kooperatifin iş akışını yöneten yapay zeka ajanısın.
 
 Görevin: Kullanıcının sorusunu anla, gerekli tool'ları çağırarak gerçek veriye bak, sonra net ve kısa Türkçe yanıt ver.
 
