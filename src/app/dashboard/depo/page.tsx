@@ -153,7 +153,6 @@ export default function DepoPage() {
             <div className="avatar">ÜK</div>
             <div className="user-chip-text">
               <h4>Üreten Kadınlar</h4>
-              <p>Admin Paneli</p>
             </div>
           </div>
           <button className="logout-btn" onClick={() => router.push('/login')}>

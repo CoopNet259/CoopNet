@@ -215,7 +215,7 @@ export default function AIRaporlarPage() {
         <div className="sidebar-footer">
           <div className="user-chip">
             <div className="avatar">ÜK</div>
-            <div className="user-chip-text"><h4>Üreten Kadınlar</h4><p>Admin Paneli</p></div>
+            <div className="user-chip-text"><h4>Üreten Kadınlar</h4></div>
           </div>
           <button className="logout-btn" onClick={() => router.push('/login')}><Icon d={icons.logout} size={16} /></button>
         </div>
