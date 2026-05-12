@@ -176,9 +176,6 @@ export default function DepoPage() {
           </div>
           <div className="header-actions">
             <NotifBell />
-            <button className="btn-primary-sm" onClick={() => alert('Sipariş formu — yakında aktif')}>
-              <Icon d={icons.plus} size={14} /> Sipariş Ver
-            </button>
           </div>
         </header>
 
