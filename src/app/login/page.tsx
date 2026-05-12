@@ -45,6 +45,7 @@ export default function LoginPage() {
     // Simulate auth — replace with real auth later
     await new Promise((r) => setTimeout(r, 900));
     if (email === 'admin@uretenkadin.coop' && password === 'kooperatif2026') {
+      localStorage.setItem('coopnet_auth', 'manager');
       router.push('/dashboard');
     } else {
       setError('E-posta veya şifre hatalı. Lütfen tekrar deneyin.');
@@ -168,6 +169,22 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          <div className="demo-hint">
+            <span className="demo-hint-label">🎯 Demo Giriş Bilgileri</span>
+            <div className="demo-hint-row">
+              <span>E-posta</span>
+              <button type="button" className="demo-fill-btn" onClick={() => setEmail(‘admin@uretenkadin.coop’)}>
+                admin@uretenkadin.coop
+              </button>
+            </div>
+            <div className="demo-hint-row">
+              <span>Şifre</span>
+              <button type="button" className="demo-fill-btn" onClick={() => setPassword(‘kooperatif2026’)}>
+                kooperatif2026
+              </button>
+            </div>
+          </div>
 
           <p className="login-invite">
             <Link href="/invite">CoopNet’ten davet isteyin</Link> veya mevcut kooperatif hesabınıza bağlanın.

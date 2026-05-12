@@ -295,6 +295,54 @@
   }
 }
 
+/* Demo hint */
+.demo-hint {
+  margin: 16px 0 4px;
+  background: linear-gradient(135deg, #f0fdf4, #fafff7);
+  border: 1px dashed #86efac;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.demo-hint-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #16a34a;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.demo-hint-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.demo-hint-row > span {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.demo-fill-btn {
+  background: #fff;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #15803d;
+  cursor: pointer;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  transition: background 0.15s, border-color 0.15s;
+  text-align: right;
+}
+.demo-fill-btn:hover {
+  background: #dcfce7;
+  border-color: #4ade80;
+}
+
 @media (max-width: 420px) {
   .login-card {
     border-radius: 24px;
