@@ -65,7 +65,7 @@ export default function AILogsPage() {
             kategori: item.ctx?.join(' · ') || 'Genel',
             detay_ne: item.title,
             detay_neden: item.why,
-            detay_veri: item.ctx?.join(' · ') || item.kategori || '—',
+            detay_veri: item.ctx?.join(' · ') || '—',
             detay_etki: item.impact || '—',
           })));
         }

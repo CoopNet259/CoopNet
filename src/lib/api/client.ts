@@ -90,7 +90,7 @@ export interface AILogsResponse {
   date: string;
   summary: { total_actions: number; total_alerts: number; danger_count: number; warn_count: number; info_count: number; unread_count: number };
   alerts: Array<{ id: string; level: string; title: string; desc: string; source: string; time: string; is_read: boolean }>;
-  actions: Array<{ id: string; time: string; title: string; why: string; ctx: string[]; status: string; confidence: number; impact: string }>;
+  actions: Array<{ id: string; time: string; title: string; why: string; ctx: string[]; status: string; impact: string }>;
 }
 
 // ── API Fonksiyonları ────────────────────────────────────────
@@ -364,3 +364,87 @@ export const postWhatsAppDemo = (message: string, profileName = 'Demo Üretici')
     body: form.toString(),
   });
 };
+
+// ── Vardiye & Personel ───────────────────────────────────────────
+
+export interface Employee {
+  id: number;
+  ad: string;
+  telefon?: string;
+  departman: string;
+  departman_label: string;
+  dept_color: string;
+  rol: string;
+  avatar_emoji: string;
+  aktif: boolean;
+}
+
+export interface ShiftEntry {
+  shift_id: number;
+  employee_id: number;
+  ad: string;
+  avatar: string;
+  rol: string;
+  telefon?: string;
+  vardiye: string;
+  vardiye_label: string;
+  vardiye_color: string;
+  baslangic: string;
+  bitis: string;
+  notlar?: string;
+}
+
+export interface ScheduleDay {
+  date: string;
+  day_name: string;
+  is_today: boolean;
+  is_weekend: boolean;
+  shifts: Record<string, ShiftEntry[]>;
+  total: number;
+}
+
+export interface ScheduleResponse {
+  week_start: string;
+  week_end: string;
+  days: ScheduleDay[];
+}
+
+export interface OnDutyEntry extends ShiftEntry {
+  departman: string;
+  departman_label: string;
+  dept_color: string;
+}
+
+export interface TaskWithAssignee {
+  id: number;
+  is_name: string;
+  durum: boolean;
+  oncelik: string;
+  departman?: string;
+  aciklama?: string;
+  created_at?: string;
+  assigned_to?: number;
+  assigned_name?: string;
+  assigned_avatar?: string;
+  assigned_rol?: string;
+}
+
+export const getEmployees = (departman?: string) =>
+  api<{ employees: Employee[] }>(`/api/shifts/employees${departman ? `?departman=${departman}` : ''}`);
+
+export const getShiftSchedule = (week?: string) =>
+  api<ScheduleResponse>(`/api/shifts/schedule${week ? `?week=${week}` : ''}`);
+
+export const getOnDuty = (departman?: string) =>
+  api<{ date: string; time: string; on_duty: OnDutyEntry[] }>(`/api/shifts/on-duty${departman ? `?departman=${departman}` : ''}`);
+
+export const getTasksWithAssignees = () =>
+  api<{ tasks: TaskWithAssignee[] }>('/api/shifts/tasks');
+
+export const createShift = (body: {
+  employee_id: number; tarih: string; vardiye_turu: string;
+  baslangic: string; bitis: string; departman: string; notlar?: string;
+}) => api<{ ok: boolean }>('/api/shifts/', { method: 'POST', body: JSON.stringify(body) });
+
+export const deleteShift = (shift_id: number) =>
+  api<{ ok: boolean }>(`/api/shifts/${shift_id}`, { method: 'DELETE' });

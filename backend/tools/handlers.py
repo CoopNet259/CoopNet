@@ -106,6 +106,56 @@ def get_daily_orders(date: str) -> dict:
     }
 
 
+def _get_on_duty_employee(departman: str) -> dict | None:
+    """
+    O an vardiyede olan ilk çalışanı döner.
+    Bulamazsa None döner (akış durdurmaz).
+    """
+    from datetime import datetime as _dt
+    sb   = get_supabase()
+    now  = _dt.now()
+    today_str = now.date().isoformat()
+    now_time  = now.strftime("%H:%M")
+    try:
+        res = (
+            sb.table("shifts")
+            .select("employee_id, employees(id, ad, avatar_emoji, rol, telefon)")
+            .eq("tarih",      today_str)
+            .eq("departman",  departman)
+            .lte("baslangic", now_time)
+            .gte("bitis",     now_time)
+            .limit(1)
+            .execute()
+        )
+        rows = res.data or []
+        if rows:
+            emp = rows[0].get("employees") or {}
+            return {
+                "id":     rows[0]["employee_id"],
+                "ad":     emp.get("ad", "?"),
+                "avatar": emp.get("avatar_emoji", "👤"),
+                "rol":    emp.get("rol", ""),
+            }
+    except Exception:
+        pass
+    return None
+
+
+# Rol → departman eşlemesi
+_ROLE_TO_DEPT: dict[str, str] = {
+    "warehouse":  "depo",
+    "depo":       "depo",
+    "logistics":  "lojistik",
+    "lojistik":   "lojistik",
+    "field":      "tarla",
+    "tarla":      "tarla",
+    "finance":    "muhasebe",
+    "muhasebe":   "muhasebe",
+    "manager":    "yonetim",
+    "yonetim":    "yonetim",
+}
+
+
 def assign_task(
     role: str,
     title: str,
@@ -114,30 +164,46 @@ def assign_task(
     product_name: str | None = None,
 ) -> dict:
     """
-    Görev oluştur — tasks tablosu: is_name, durum (bool), oncelik
+    Görev oluştur — vardiyede olan çalışana otomatik ata.
+    tasks tablosu: is_name, durum, oncelik, assigned_to, departman, aciklama
     """
     sb = get_supabase()
 
     oncelik_map = {"high": "yuksek", "medium": "orta", "low": "dusuk"}
     oncelik = oncelik_map.get(priority, priority)
 
+    # Vardiyedeki çalışanı bul
+    departman   = _ROLE_TO_DEPT.get(role.lower(), "depo")
+    on_duty_emp = _get_on_duty_employee(departman)
+
+    record: dict = {
+        "is_name":   title,
+        "durum":     False,
+        "oncelik":   oncelik,
+        "departman": departman,
+        "aciklama":  description or "",
+    }
+    if on_duty_emp:
+        record["assigned_to"] = on_duty_emp["id"]
+
     try:
-        task_res = (
-            sb.table("tasks")
-            .insert({
-                "is_name": title,
-                "durum": False,
-                "oncelik": oncelik,
-            })
-            .execute()
-        )
+        task_res = sb.table("tasks").insert(record).execute()
         if task_res.data:
             task_id = task_res.data[0].get("id") if isinstance(task_res.data, list) else task_res.data.get("id")
-            return {"task_id": task_id, "message": f'Görev oluşturuldu: "{title}"'}
+            assignee_msg = f" → {on_duty_emp['avatar']} {on_duty_emp['ad']} ({on_duty_emp['rol']})" if on_duty_emp else " → (vardiyede kimse yok)"
+            return {
+                "task_id":    task_id,
+                "assigned_to": on_duty_emp,
+                "message":    f'Görev oluşturuldu: "{title}"{assignee_msg}',
+            }
     except Exception:
-        pass  # RLS veya başka hata — görevi oluşturamadık ama akışı durdurmuyoruz
+        pass
 
-    return {"task_id": "demo", "message": f'Görev planlandı: "{title}" (DB kısıtı: Supabase INSERT policy gerekli)'}
+    return {
+        "task_id":    "demo",
+        "assigned_to": on_duty_emp,
+        "message":    f'Görev planlandı: "{title}"' + (f" → {on_duty_emp['ad']}" if on_duty_emp else ""),
+    }
 
 
 def update_stock(product_name: str, delta: float, reason: str) -> dict:

@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from routers import harvest, ai, dashboard, cron, producers, anomaly_router, whatsapp, approvals, waste_prevention
+from routers import harvest, ai, dashboard, cron, producers, anomaly_router, whatsapp, approvals, waste_prevention, shifts
 
 app = FastAPI(title="CoopNet API", version="1.0.0")
 
@@ -23,6 +23,7 @@ app.include_router(anomaly_router.router)
 app.include_router(whatsapp.router)
 app.include_router(approvals.router)
 app.include_router(waste_prevention.router)
+app.include_router(shifts.router)
 
 
 # ── Zamanlanmış Görevler ──────────────────────────────────────────────────────
