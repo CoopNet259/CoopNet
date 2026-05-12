@@ -119,6 +119,57 @@ def _resolve_confidence(confidence: float) -> dict:
     }
 
 
+PARSE_MULTI_SYSTEM = """Kullanıcının Türkçe mesajından TÜM hasat edilen ürünleri çıkar ve SADECE JSON array döndür.
+
+Her ürün için:
+- product_name: ürün adı (string)
+- quantity: miktar (number)
+- unit: birim — "kg", "adet", "kasa" (string)
+- available_time: varsa saat "HH:MM" formatında, yoksa null
+- confidence: 0.0-1.0 arası güven skoru (number)
+
+Tek ürün olsa bile array döndür.
+
+Örnek:
+Girdi: "50 kg biber ve 30 kg domates hasat ettim, öğleye kadar getirebilirim"
+Çıktı: [
+  {"product_name":"biber","quantity":50,"unit":"kg","available_time":"12:00","confidence":0.95},
+  {"product_name":"domates","quantity":30,"unit":"kg","available_time":"12:00","confidence":0.95}
+]"""
+
+
+async def _parse_harvest_multi(message: str) -> list[ParsedHarvest]:
+    """Mesajdan birden fazla ürünü parse et. Liste döner."""
+    import re
+    prompt = (
+        f"{PARSE_MULTI_SYSTEM}\n\n"
+        f"Mesaj: {message}\n\n"
+        "Sadece JSON array döndür, başka hiçbir şey yazma."
+    )
+    try:
+        model = get_model(complex=False)
+        result = await asyncio.wait_for(
+            asyncio.to_thread(model.generate_content, prompt),
+            timeout=9.0,
+        )
+        try:
+            text = result.text.strip()
+        except Exception:
+            parts = result.candidates[0].content.parts
+            text = "".join(p.text for p in parts if hasattr(p, "text") and p.text).strip()
+        m = re.search(r"\[.*\]", text, re.DOTALL)
+        if m:
+            text = m.group(0)
+        items = json.loads(text)
+        if isinstance(items, dict):
+            items = [items]
+        return [ParsedHarvest(**item) for item in items]
+    except Exception:
+        # Regex fallback — tek ürün dene
+        fallback = _regex_parse(message)
+        return [fallback] if fallback else []
+
+
 @router.post("/analyze")
 async def analyze_harvest(req: HarvestRequest):
     if not req.message:

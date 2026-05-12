@@ -194,24 +194,42 @@ export const getAnomalySummary = (date?: string) => {
 export const getAIReports = () =>
   api<AIReportItem[]>('/api/ai/reports');
 
+// ── Ajan Kararları ────────────────────────────────────────────
+
+export interface AgentDecisionItem {
+  id: number;
+  ajan: string;
+  ajan_label: string;
+  ajan_icon: string;
+  karar: string;
+  karar_label: string;
+  aciklama: string;
+  tetikleyen: string;
+  meta: Record<string, unknown>;
+  saat: string;
+  tarih: string;
+  raw_time: string;
+}
+
+export interface AgentDecisionsResponse {
+  total: number;
+  items: AgentDecisionItem[];
+}
+
+export const getAgentDecisions = (limit = 50) =>
+  api<AgentDecisionsResponse>(`/api/ai/decisions?limit=${limit}`);
+
 export interface WhatsAppDemoResult {
   reply: string;
-  parsed: {
-    product_name: string;
+  results: Array<{
+    product: string;
     quantity: number;
-    unit: string;
-    available_time: string | null;
-    confidence: number;
-  } | null;
-  stock_status: {
-    current_quantity: number;
-    unit: string;
-    is_critical: boolean;
-    fill_percentage: number;
-  } | null;
-  executed_actions: string[];
-  confidence_label: string;
-  confidence_warning: string | null;
+    needed: number;
+    decision: 'otomatik_kabul' | 'ihtiyac_yok' | 'onay_bekleniyor';
+    fill_pct: number;
+    reply_line: string;
+  }>;
+  error?: string;
 }
 
 export interface HarvestMessagesResponse {
@@ -232,6 +250,109 @@ export interface HarvestMessagesResponse {
 
 export const getHarvestMessages = (limit = 20) =>
   api<HarvestMessagesResponse>(`/api/harvest/messages?limit=${limit}`);
+
+// ── Onay Kuyruğu ────────────────────────────────────────────
+
+export interface PendingApproval {
+  id: number;
+  uretici_telefon: string;
+  uretici_adi: string;
+  urun_adi: string;
+  talep_miktari: number;
+  kabul_miktari: number;
+  birim: string;
+  stok_doluluk: number;
+  ham_mesaj: string;
+  durum: 'bekliyor' | 'onaylandi' | 'reddedildi' | 'zaman_asimi';
+  olusturuldu: string;
+}
+
+export interface ApprovalActionResult {
+  status: string;
+  approval_id: number;
+  task_id?: string;
+  message?: string;
+  whatsapp_reply: string;
+}
+
+export const getAllStock = () =>
+  api<StockItem[]>('/api/dashboard/stock/all');
+
+export const getApprovals = () =>
+  api<PendingApproval[]>('/api/approvals');
+
+export const approveRequest = (id: number) =>
+  api<ApprovalActionResult>(`/api/approvals/${id}/approve`, { method: 'POST' });
+
+export const rejectRequest = (id: number) =>
+  api<ApprovalActionResult>(`/api/approvals/${id}/reject`, { method: 'POST' });
+
+// ── İsraf Önleme ─────────────────────────────────────────────
+
+export interface WasteSisterProducer {
+  id: string;
+  ad: string;
+  lokasyon: string;
+  telefon: string;
+  avatar: string;
+}
+
+export interface WasteRiskItem {
+  id: string;
+  urun: string;
+  emoji: string;
+  mevcut_kg: number;
+  days_left: number;
+  surplus_kg: number;
+  daily_est_kg: number;
+  alis_fiyati: number | null;
+  kategori: string;
+  kardesler: WasteSisterProducer[];
+}
+
+export interface WasteRiskResponse {
+  scanned_at: string;
+  total_at_risk: number;
+  items: WasteRiskItem[];
+}
+
+// ── Talep Trendleri ───────────────────────────────────────────
+
+export interface DemandTrendItem {
+  name: string;
+  delta: string;
+  pct: number;
+  up: boolean;
+  this_week_kg: number;
+  last_week_kg: number;
+}
+
+export interface DemandTrendsResponse {
+  date: string;
+  up: DemandTrendItem[];
+  down: DemandTrendItem[];
+}
+
+export const getWasteRisk = () =>
+  api<WasteRiskResponse>('/api/waste-prevention/scan');
+
+export const testWhatsApp = () =>
+  api<{ status: string; to: string; message_sid: string; message: string }>('/api/waste-prevention/test-whatsapp');
+
+export const getDemandTrends = () =>
+  api<DemandTrendsResponse>('/api/dashboard/trends');
+
+export const sendWasteOffer = (urun_adi: string, surplus_kg: number, days_left: number) =>
+  api<{ status: string; sent_count: number; message: string }>('/api/waste-prevention/send-offer', {
+    method: 'POST',
+    body: JSON.stringify({ urun_adi, surplus_kg, days_left }),
+  });
+
+export const createWasteTask = (urun_adi: string, surplus_kg: number, days_left: number) =>
+  api<{ status: string; task_id?: string; message: string }>('/api/waste-prevention/create-task', {
+    method: 'POST',
+    body: JSON.stringify({ urun_adi, surplus_kg, days_left }),
+  });
 
 export const postWhatsAppDemo = (message: string, profileName = 'Demo Üretici') => {
   const form = new URLSearchParams();

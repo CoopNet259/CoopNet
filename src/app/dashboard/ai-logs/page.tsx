@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './ai-logs.css';
-import { getAILogs } from '@/lib/api/client';
+import { getAILogs, getAgentDecisions, type AgentDecisionItem } from '@/lib/api/client';
 
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 function todayTr(): string { const n = new Date(); return `${n.getDate()} ${TR_MONTHS[n.getMonth()]} ${n.getFullYear()}`; }
@@ -78,6 +78,9 @@ export default function AILogsPage() {
   const [activeNav, setActiveNav] = useState('ai-logs');
   const [showNotif, setShowNotif] = useState(false);
   const [aiActing, setAiActing] = useState<any[]>(initialAiActingData);
+  const [decisions, setDecisions] = useState<AgentDecisionItem[]>([]);
+  const [decisionsLoading, setDecisionsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'logs' | 'decisions'>('logs');
 
   useEffect(() => {
     getAILogs()
@@ -98,6 +101,11 @@ export default function AILogsPage() {
         }
       })
       .catch(err => console.error('AI Logs çekilemedi:', err));
+
+    getAgentDecisions(100)
+      .then(data => setDecisions(data.items))
+      .catch(console.error)
+      .finally(() => setDecisionsLoading(false));
   }, []);
 
   const navClick = (item: typeof navItems[0]) => {
@@ -182,6 +190,88 @@ export default function AILogsPage() {
 
         {/* Content */}
         <div className="content">
+
+          {/* Tab bar */}
+          <div className="logs-tab-bar">
+            <button
+              className={`logs-tab${activeTab === 'logs' ? ' logs-tab-active' : ''}`}
+              onClick={() => setActiveTab('logs')}
+            >
+              🤖 AI İşlem Kayıtları
+              <span className="logs-tab-count">{aiActing.length}</span>
+            </button>
+            <button
+              className={`logs-tab${activeTab === 'decisions' ? ' logs-tab-active' : ''}`}
+              onClick={() => setActiveTab('decisions')}
+            >
+              📋 Ajan Kararları
+              <span className="logs-tab-count">{decisions.length}</span>
+            </button>
+          </div>
+
+          {/* ── Ajan Kararları Tab ── */}
+          {activeTab === 'decisions' && (
+            <div className="decisions-panel">
+              <div className="decisions-header-row">
+                <div>
+                  <h3>Ajan Kararları</h3>
+                  <p>Teklif gönderme, depo görevi, WhatsApp hasat onayı gibi tüm ajan aksiyonları</p>
+                </div>
+              </div>
+
+              {decisionsLoading && (
+                <div className="decisions-loading">Yükleniyor…</div>
+              )}
+
+              {!decisionsLoading && decisions.length === 0 && (
+                <div className="decisions-empty">
+                  <span>📋</span>
+                  <p>Henüz kayıtlı ajan kararı yok.</p>
+                </div>
+              )}
+
+              {!decisionsLoading && decisions.length > 0 && (
+                <div className="decisions-table-wrap">
+                  <table className="decisions-table">
+                    <thead>
+                      <tr>
+                        <th>Zaman</th>
+                        <th>Ajan</th>
+                        <th>Karar</th>
+                        <th>Açıklama</th>
+                        <th>Tetikleyen</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {decisions.map(d => (
+                        <tr key={d.id}>
+                          <td className="td-time">
+                            <span className="td-saat">{d.saat}</span>
+                            <span className="td-tarih">{d.tarih}</span>
+                          </td>
+                          <td>
+                            <span className="td-ajan">
+                              {d.ajan_icon} {d.ajan_label}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`td-karar karar-${d.karar}`}>
+                              {d.karar_label}
+                            </span>
+                          </td>
+                          <td className="td-aciklama">{d.aciklama}</td>
+                          <td className="td-tetikleyen">{d.tetikleyen}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Mevcut Logs Tab ── */}
+          {activeTab === 'logs' && (
           <div className="ai-logs-layout">
 
             {/* 1. Uyarılar (Erken Uyarı Sistemi) */}
@@ -258,6 +348,8 @@ export default function AILogsPage() {
             </section>
 
           </div>
+          )} {/* end logs tab */}
+
         </div>
       </main>
     </div>
