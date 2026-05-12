@@ -66,8 +66,12 @@
 .finansal-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: auto auto;
   gap: 20px;
+}
+
+/* Dünün Raporu — tam genişlik (tek panel üst satırda) */
+.finansal-layout > section:first-child {
+  grid-column: 1 / -1;
 }
 
 .finansal-panel {

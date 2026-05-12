@@ -6,8 +6,10 @@ import NotifBell from '../components/NotifBell';
 import { getFinancialSummary, type FinancialSummary } from '@/lib/api/client';
 
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
-function todayTr(): string { const n = new Date(); return `${n.getDate()} ${TR_MONTHS[n.getMonth()]} ${n.getFullYear()}`; }
-function yesterdayTr(): string { const n = new Date(); n.setDate(n.getDate() - 1); return `${n.getDate()} ${TR_MONTHS[n.getMonth()]} ${n.getFullYear()}`; }
+function isoToTr(iso: string): string {
+  const d = new Date(iso + 'T12:00:00');
+  return `${d.getDate()} ${TR_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
 
 const Icon = ({ d, size = 18, extra = '' }: { d: string | string[]; size?: number; extra?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={extra}>
@@ -69,22 +71,21 @@ export default function FinansalRaporlarPage() {
 
   useEffect(() => { load(); }, []);
 
-  const toggleTask = (id: number) => {
-    if (!data) return;
-    setData({
-      ...data,
-      tasks: data.tasks.map(t => t.id === id ? { ...t, durum: !t.durum } : t),
-    });
-  };
-
   const navClick = (item: typeof navItems[0]) => {
     setActiveNav(item.id);
     router.push(item.path);
   };
 
   const yesterday = data?.yesterday;
-  const tasks     = data?.tasks ?? [];
   const cards     = data?.weekly_cards ?? [];
+
+  // Tarihler API'den gelen ISO string üzerinden hesaplanıyor (hydration güvenli)
+  const todayIso     = data?.date ?? new Date().toISOString().slice(0, 10);
+  const yesterdayIso = (() => {
+    const d = new Date(todayIso + 'T12:00:00');
+    d.setDate(d.getDate() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  })();
 
   const Shimmer = ({ w = '100%', h = 20 }: { w?: string | number; h?: number }) => (
     <div className="fin-shimmer" style={{ width: w, height: h, borderRadius: 6 }} />
@@ -173,47 +174,13 @@ export default function FinansalRaporlarPage() {
         <div className="content">
           <div className="finansal-layout">
 
-            {/* 1. SOL ÜST: Bugün Yapılacaklar */}
-            <section className="finansal-panel">
-              <div className="panel-header">
-                <Icon d={icons.clipboard} size={18} extra="text-green-600" />
-                <h3>Görevler</h3>
-                {!loading && (
-                  <span className="panel-badge green">
-                    {tasks.filter(t => t.durum).length}/{tasks.length}
-                  </span>
-                )}
-              </div>
-              <div className="is-listesi">
-                {loading
-                  ? Array.from({ length: 4 }).map((_, i) => (
-                      <div key={i} className="is-item" style={{ gap: 10 }}>
-                        <Shimmer w={20} h={20} />
-                        <Shimmer w="80%" h={14} />
-                      </div>
-                    ))
-                  : tasks.length === 0
-                    ? <p className="fin-empty">Görev bulunamadı.</p>
-                    : tasks.map(t => (
-                        <div key={t.id} className={`is-item${t.durum ? ' done' : ''}`}
-                          onClick={() => toggleTask(t.id)}>
-                          <div className={`is-check${t.durum ? ' checked' : ''}`}>
-                            {t.durum && <Icon d={icons.check} size={12} />}
-                          </div>
-                          <span className="is-text">{t.is}</span>
-                        </div>
-                      ))
-                }
-              </div>
-            </section>
-
-            {/* 2. SAĞ ÜST: Dünün Raporu */}
+            {/* 1. Dünün Raporu */}
             <section className="finansal-panel">
               <div className="panel-header">
                 <Icon d={icons.calendar} size={18} extra="text-blue-500" />
                 <h3>Dünün Raporu</h3>
                 <span className="panel-badge" style={{ background: 'var(--blue-100)', color: 'var(--blue-500)' }}>
-                  {yesterdayTr()}
+                  {isoToTr(yesterdayIso)}
                 </span>
               </div>
               <div className="dun-rapor-grid">
