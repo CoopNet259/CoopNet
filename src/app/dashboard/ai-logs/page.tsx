@@ -66,11 +66,12 @@ export default function AILogsPage() {
   const [activeTab, setActiveTab] = useState<'logs' | 'decisions'>('logs');
 
   useEffect(() => {
-    // Gerçek uyarılar — anomali API'sinden, sadece kritik/yüksek
+    // Gerçek uyarılar — anomali API'sinden, sadece kritik/yüksek, max 8
     getAnomalySummary()
       .then(data => {
         const critical = (data.anomalies as AnomalyItem[])
-          .filter(a => a.severity === 'kritik' || a.severity === 'yuksek');
+          .filter(a => a.severity === 'kritik' || a.severity === 'yuksek')
+          .slice(0, 8);
         setWarnings(critical);
       })
       .catch(console.error)

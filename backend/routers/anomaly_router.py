@@ -26,41 +26,43 @@ async def anomaly_summary(target_date: str = Query(default=None)):
     today     = date.fromisoformat(today_str)
     anomalies: list[dict] = []
 
-    # ── 1. Ürün & stok verileri ──────────────────────────────────
+    # ── 1. Stok anomalileri ──────────────────────────────────────
+    # Eşikler: kritik ≤ %15, yüksek ≤ %25 (eski %40 çok geniş)
     products_res = sb.table("products").select(
         "id, ad, emoji, mevcut_kg, kapasite_kg, son_kullanim_tarihi"
     ).execute()
     products = products_res.data or []
 
-    # Stok düşüklüğü anomalileri
+    expiring_product_ids: set = set()  # tekrarlı stk uyarısı engellemek için
+
     for p in products:
         current  = p.get("mevcut_kg") or 0
         capacity = p.get("kapasite_kg") or 1
         pct      = round((current / capacity) * 100) if capacity > 0 else 100
         name     = f"{p.get('emoji', '')} {p.get('ad', '')}".strip()
 
-        if pct <= 20:
+        if pct <= 15:
             anomalies.append({
                 "id": f"stock-{p['id']}",
                 "title": f"{name} stok seviyesi kritik",
-                "description": f"Mevcut stok kapasitesinin %{pct}'i. Acil tedarik planlanmalı.",
+                "description": f"Mevcut stok kapasitesinin yalnızca %{pct}'i. Acil tedarik planlanmalı.",
                 "severity": "kritik",
                 "category": "Depo",
                 "source": "Stok Analizi",
                 "recommendation": "Satın alma desteği ile ek stok talebi oluşturun.",
             })
-        elif pct <= 40:
+        elif pct <= 25:
             anomalies.append({
                 "id": f"stock-{p['id']}",
                 "title": f"{name} stoğu düşük",
-                "description": f"Mevcut stok kapasitesinin %{pct}'i. Talep artışı riski var.",
+                "description": f"Mevcut stok kapasitesinin %{pct}'i. Yakın vadeli talep karşılanamayabilir.",
                 "severity": "yuksek",
                 "category": "Depo",
                 "source": "Stok Analizi",
                 "recommendation": "Tedarikçi ve üretim planını kontrol edin.",
             })
 
-    # ── 2. Son kullanım tarihi yaklaşan ürünler ──────────────────
+    # ── 2. Raf ömrü riski ────────────────────────────────────────
     for p in products:
         sku_raw = p.get("son_kullanim_tarihi")
         if not sku_raw:
@@ -71,10 +73,11 @@ async def anomaly_summary(target_date: str = Query(default=None)):
             continue
 
         days_left = (sku - today).days
-        name = f"{p.get('emoji', '')} {p.get('ad', '')}".strip()
+        name    = f"{p.get('emoji', '')} {p.get('ad', '')}".strip()
         surplus = p.get("mevcut_kg") or 0
 
         if days_left < 0:
+            expiring_product_ids.add(str(p["ad"]).lower())
             anomalies.append({
                 "id": f"expired-{p['id']}",
                 "title": f"{name} son kullanım tarihi geçti",
@@ -84,7 +87,8 @@ async def anomaly_summary(target_date: str = Query(default=None)):
                 "source": "Raf Ömrü Takibi",
                 "recommendation": "Stoğu derhal imha listesine alın veya kardeş üreticiye devredin.",
             })
-        elif days_left <= 2:
+        elif days_left <= 2 and surplus >= 5:
+            expiring_product_ids.add(str(p["ad"]).lower())
             anomalies.append({
                 "id": f"expiring-{p['id']}",
                 "title": f"{name} {days_left} gün içinde sona eriyor",
@@ -94,18 +98,19 @@ async def anomaly_summary(target_date: str = Query(default=None)):
                 "source": "Raf Ömrü Takibi",
                 "recommendation": "Kardeş üretici onayını takip edin veya depo görevi oluşturun.",
             })
-        elif days_left <= 5:
+        elif days_left <= 5 and surplus >= 10:
+            expiring_product_ids.add(str(p["ad"]).lower())
             anomalies.append({
                 "id": f"expiring-{p['id']}",
-                "title": f"{name} raf ömrü riski",
-                "description": f"{surplus} kg stok var, {days_left} gün kaldı (son kullanım: {sku_raw}).",
+                "title": f"{name} raf ömrü riski — {days_left} gün kaldı",
+                "description": f"{surplus} kg stok var, son kullanım: {sku_raw}.",
                 "severity": "yuksek",
                 "category": "İsraf",
                 "source": "Raf Ömrü Takibi",
                 "recommendation": "Talepler sayfasından teklif gönderin veya depo görevi açın.",
             })
 
-    # ── 3. Haftalık talep trend anomalileri ──────────────────────
+    # ── 3. Haftalık talep anomalileri ────────────────────────────
     week_start = (today - timedelta(days=7)).isoformat()
     prev_start = (today - timedelta(days=14)).isoformat()
 
@@ -134,42 +139,36 @@ async def anomaly_summary(target_date: str = Query(default=None)):
 
     product_names = {p.get("ad", "").strip() for p in products}
 
-    # 3a. Bu hafta talebi tamamen düşen ürünler
+    # Talebi tamamen düşen ürünler (minimum baseline 20 kg)
     for urun, prev_kg in prev_totals.items():
-        if prev_kg >= 10 and this_totals.get(urun, 0) == 0:
+        if prev_kg >= 20 and this_totals.get(urun, 0) == 0:
             anomalies.append({
                 "id": f"demand-gone-{urun}",
                 "title": f"{urun} talebi bu hafta sıfırlandı",
-                "description": (
-                    f"Geçen hafta {prev_kg:.0f} kg sipariş alan {urun} için "
-                    "bu hafta hiç sipariş gelmedi."
-                ),
+                "description": f"Geçen hafta {prev_kg:.0f} kg sipariş alan {urun} için bu hafta hiç sipariş gelmedi.",
                 "severity": "yuksek",
                 "category": "Talep",
                 "source": "Haftalık Trend",
                 "recommendation": "Müşteri iletişimini kontrol edin, fiyat veya kalite sorunu olabilir.",
             })
 
-    # 3b. Bu hafta aniden patlayan talep (>%150 artış, baseline ≥ 10 kg)
+    # Talep patlaması (>%200, minimum baseline 20 kg)
     for urun, this_kg in this_totals.items():
         prev_kg = prev_totals.get(urun, 0)
-        if prev_kg >= 10:
+        if prev_kg >= 20:
             pct_change = ((this_kg - prev_kg) / prev_kg) * 100
-            if pct_change > 150:
+            if pct_change > 200:
                 anomalies.append({
                     "id": f"demand-spike-{urun}",
                     "title": f"{urun} talebinde ani artış: +%{pct_change:.0f}",
-                    "description": (
-                        f"Geçen hafta {prev_kg:.0f} kg → bu hafta {this_kg:.0f} kg. "
-                        "Stok karşılayamayabilir."
-                    ),
+                    "description": f"Geçen hafta {prev_kg:.0f} kg → bu hafta {this_kg:.0f} kg. Stok karşılayamayabilir.",
                     "severity": "yuksek",
                     "category": "Talep",
                     "source": "Haftalık Trend",
                     "recommendation": "Depo stoğunu kontrol edin, gerekirse acil tedarik başlatın.",
                 })
 
-    # 3c. Ürün kayıtlı ama hiç sipariş yok (tüm zamanlar)
+    # Hiç sipariş almayan ürünler — sadece bilgi
     try:
         all_reqs_res = sb.table("requests").select("urun").execute()
         ordered_products = {(r.get("urun") or "").strip() for r in (all_reqs_res.data or [])}
@@ -193,25 +192,26 @@ async def anomaly_summary(target_date: str = Query(default=None)):
     open_orders   = [r for r in this_week_rows if r.get("durum") in open_statuses]
     delayed       = [r for r in this_week_rows if r.get("durum") in ("gecikti", "gecikmiş")]
 
-    if open_orders and len(delayed) / max(len(open_orders), 1) >= 0.25:
+    if len(open_orders) >= 3 and len(delayed) / max(len(open_orders), 1) >= 0.30:
         pct_delayed = round(len(delayed) / len(open_orders) * 100)
         anomalies.append({
             "id": "delayed-orders-spike",
             "title": f"Gecikmiş sipariş oranı yüksek: %{pct_delayed}",
-            "description": (
-                f"Bu haftaki açık siparişlerin %{pct_delayed}'i (%{len(delayed)}/{len(open_orders)}) "
-                "gecikmiş durumda."
-            ),
+            "description": f"Bu haftaki açık siparişlerin %{pct_delayed}'i gecikmiş ({len(delayed)}/{len(open_orders)}).",
             "severity": "yuksek",
             "category": "Lojistik",
             "source": "Sipariş Analizi",
             "recommendation": "Lojistik süreçleri ve teslimat kanallarını gözden geçirin.",
         })
 
-    # ── 5. STK uyarıları (stk_alerts tablosu) ───────────────────
+    # ── 5. STK uyarıları — raf ömrü ile tekrar etmesin ──────────
     try:
         stk_res = sb.table("stk_alerts").select("*").execute()
         for alert in (stk_res.data or []):
+            urun_adi = (alert.get("urun") or "").strip().lower()
+            # Aynı ürün için zaten raf ömrü anomalisi varsa STK uyarısını atla
+            if urun_adi in expiring_product_ids:
+                continue
             kardesler = alert.get("kardesler") or []
             if isinstance(kardesler, str):
                 try:
@@ -219,7 +219,7 @@ async def anomaly_summary(target_date: str = Query(default=None)):
                 except Exception:
                     kardesler = []
             line = (
-                f"Kardeş üreticiler: {', '.join(c.get('ad', '') for c in kardesler)}."
+                f"Kardeş üreticiler: {', '.join(c.get('ad', '') for c in kardesler[:2])}."
                 if kardesler else ""
             )
             anomalies.append({
@@ -234,29 +234,12 @@ async def anomaly_summary(target_date: str = Query(default=None)):
     except Exception:
         pass
 
-    # ── 6. AI log anomalileri ────────────────────────────────────
-    try:
-        logs_res = (
-            sb.table("ai_logs")
-            .select("id, tip, baslik, mesaj, kategori")
-            .eq("tip", "Anomali")
-            .limit(5)
-            .execute()
-        )
-        for log in (logs_res.data or []):
-            anomalies.append({
-                "id": f"ai-{log['id']}",
-                "title": f"AI tespiti: {log.get('baslik', '')}",
-                "description": log.get("mesaj", ""),
-                "severity": "kritik",
-                "category": log.get("kategori", "AI Tespiti"),
-                "source": "AI Görüşü",
-                "recommendation": "Hatanın kaynağını inceleyin ve gerekirse depo operasyonunu güncelleyin.",
-            })
-    except Exception:
-        pass
+    # ── 6. AI log anomalileri — anomali panelinde göster ama
+    #       uyarı bölümünde değil (AI Acting'de zaten var) ────────
+    # NOT: Bu kayıtlar anomali listesine EKLENMEZ. Frontend'de
+    #      AI Acting ayrı gösterildiği için çift gösterim olur.
 
-    # Tekrar eden id'leri temizle, öncelik sırala
+    # Tekrarlı id'leri temizle, öncelik sırala
     seen: set[str] = set()
     unique: list[dict] = []
     for a in sorted(anomalies, key=lambda x: SEVERITY_ORDER.get(x["severity"], 4)):
