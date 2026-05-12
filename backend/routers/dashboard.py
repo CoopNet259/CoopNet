@@ -58,6 +58,18 @@ async def dashboard_summary():
     critical_count = sum(1 for s in stock_items if s["is_critical"])
     open_tasks = [t for t in tasks if not t.get("durum")]
 
+    # ── Büyük market isimlerini gerçekçi müşterilere çevir ──────
+    MUSTERI_MAP = {
+        "Migros Market":       "Çukurova Restoran",
+        "BİM Market":          "Elif Hanım Mutfağı",
+        "A101 Market":         "Lezzet Lokantası",
+        "Organik Pazar":       "Doğal Gıda Dükkânı",
+        "Tarım Kooperatifi":   "Akdeniz Üreticiler Birliği",
+    }
+
+    def normalize_musteri(ad: str) -> str:
+        return MUSTERI_MAP.get(ad, ad)
+
     # ── Siparişleri formatla ─────────────────────────────────────
     def urgency(durum: str) -> str:
         if durum in ("gecikti", "gecikmiş"):
@@ -69,7 +81,7 @@ async def dashboard_summary():
     formatted_orders = [
         {
             "id": str(r["id"]),
-            "customer": r.get("musteri", ""),
+            "customer": normalize_musteri(r.get("musteri", "")),
             "product": r.get("urun", ""),
             "quantity": r.get("miktar", ""),
             "unit": "kg",

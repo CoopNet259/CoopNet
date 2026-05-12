@@ -123,54 +123,54 @@ TRUNCATE requests RESTART IDENTITY CASCADE;
 
 INSERT INTO requests (id, musteri, urun, miktar, saat, durum, tarih, birim_fiyat, toplam_tutar) VALUES
 -- 4 Mayıs Pazartesi
-(1,  'Migros Market',            'Domates',   '40 kg',  '09:00', 'tamamlandi', '2026-05-04', 24,  960),
-(2,  'Organik Pazar',            'Kayısı',    '15 kg',  '10:30', 'tamamlandi', '2026-05-04', 72,  1080),
-(3,  'BİM Market',               'Soğan',     '30 kg',  '11:00', 'tamamlandi', '2026-05-04', 14,  420),
+(1,  'Çukurova Restoran',            'Domates',   '40 kg',  '09:00', 'tamamlandi', '2026-05-04', 24,  960),
+(2,  'Doğal Gıda Dükkânı',            'Kayısı',    '15 kg',  '10:30', 'tamamlandi', '2026-05-04', 72,  1080),
+(3,  'Elif Hanım Mutfağı',               'Soğan',     '30 kg',  '11:00', 'tamamlandi', '2026-05-04', 14,  420),
 (4,  'Taze Dükkan',              'Üzüm',      '20 kg',  '14:00', 'tamamlandi', '2026-05-04', 60,  1200),
 (5,  'Lezzet Lokantası',         'İncir',     '12 kg',  '15:00', 'tamamlandi', '2026-05-04', 115, 1380),
 -- 5 Mayıs Salı
-(6,  'Migros Market',            'Biber',     '22 kg',  '09:30', 'tamamlandi', '2026-05-05', 38,  836),
-(7,  'A101 Market',              'Domates',   '45 kg',  '10:00', 'tamamlandi', '2026-05-05', 24,  1080),
+(6,  'Çukurova Restoran',            'Biber',     '22 kg',  '09:30', 'tamamlandi', '2026-05-05', 38,  836),
+(7,  'Lezzet Lokantası',              'Domates',   '45 kg',  '10:00', 'tamamlandi', '2026-05-05', 24,  1080),
 (8,  'Belediye Sosyal Market',   'Havuç',     '28 kg',  '11:30', 'tamamlandi', '2026-05-05', 18,  504),
-(9,  'Organik Pazar',            'İncir',     '13 kg',  '13:00', 'tamamlandi', '2026-05-05', 115, 1495),
+(9,  'Doğal Gıda Dükkânı',            'İncir',     '13 kg',  '13:00', 'tamamlandi', '2026-05-05', 115, 1495),
 (10, 'Yeşil Sofralar',           'Kayısı',    '16 kg',  '14:30', 'tamamlandi', '2026-05-05', 72,  1152),
 -- 6 Mayıs Çarşamba
-(11, 'Migros Market',            'Salatalık', '22 kg',  '08:45', 'tamamlandi', '2026-05-06', 14,  308),
-(12, 'BİM Market',               'Mısır',     '22 kg',  '10:00', 'tamamlandi', '2026-05-06', 20,  440),
+(11, 'Çukurova Restoran',            'Salatalık', '22 kg',  '08:45', 'tamamlandi', '2026-05-06', 14,  308),
+(12, 'Elif Hanım Mutfağı',               'Mısır',     '22 kg',  '10:00', 'tamamlandi', '2026-05-06', 20,  440),
 (13, 'Kooperatif Kantini',       'Patlıcan',  '13 kg',  '11:00', 'tamamlandi', '2026-05-06', 28,  364),
 (14, 'Taze Dükkan',              'Üzüm',      '20 kg',  '15:00', 'tamamlandi', '2026-05-06', 60,  1200),
 -- 7 Mayıs Perşembe
-(15, 'Migros Market',            'Domates',   '45 kg',  '09:00', 'tamamlandi', '2026-05-07', 24,  1080),
-(16, 'A101 Market',              'Biber',     '22 kg',  '10:30', 'tamamlandi', '2026-05-07', 38,  836),
-(17, 'Organik Pazar',            'Kayısı',    '16 kg',  '11:00', 'tamamlandi', '2026-05-07', 72,  1152),
+(15, 'Çukurova Restoran',            'Domates',   '45 kg',  '09:00', 'tamamlandi', '2026-05-07', 24,  1080),
+(16, 'Lezzet Lokantası',              'Biber',     '22 kg',  '10:30', 'tamamlandi', '2026-05-07', 38,  836),
+(17, 'Doğal Gıda Dükkânı',            'Kayısı',    '16 kg',  '11:00', 'tamamlandi', '2026-05-07', 72,  1152),
 (18, 'Belediye Sosyal Market',   'Soğan',     '32 kg',  '13:00', 'tamamlandi', '2026-05-07', 14,  448),
 (19, 'Lezzet Lokantası',         'İncir',     '13 kg',  '14:00', 'tamamlandi', '2026-05-07', 115, 1495),
 -- 8 Mayıs Cuma
-(20, 'Migros Market',            'Salatalık', '22 kg',  '08:30', 'tamamlandi', '2026-05-08', 14,  308),
-(21, 'BİM Market',               'Havuç',     '26 kg',  '10:00', 'tamamlandi', '2026-05-08', 18,  468),
+(20, 'Çukurova Restoran',            'Salatalık', '22 kg',  '08:30', 'tamamlandi', '2026-05-08', 14,  308),
+(21, 'Elif Hanım Mutfağı',               'Havuç',     '26 kg',  '10:00', 'tamamlandi', '2026-05-08', 18,  468),
 (22, 'Bereket Salça Atölyesi',   'Domates',   '50 kg',  '11:00', 'tamamlandi', '2026-05-08', 20,  1000),
 (23, 'Bereket Salça Atölyesi',   'Biber',     '30 kg',  '11:30', 'tamamlandi', '2026-05-08', 32,  960),
 (24, 'Yeşil Sofralar',           'Üzüm',      '20 kg',  '16:00', 'tamamlandi', '2026-05-08', 60,  1200),
 -- 9 Mayıs Cumartesi
 (25, 'Esnaf Pazarı',             'Domates',   '35 kg',  '09:00', 'tamamlandi', '2026-05-09', 24,  840),
 (26, 'Esnaf Pazarı',             'Biber',     '18 kg',  '09:30', 'tamamlandi', '2026-05-09', 38,  684),
-(27, 'Organik Pazar',            'Kayısı',    '20 kg',  '11:00', 'tamamlandi', '2026-05-09', 72,  1440),
+(27, 'Doğal Gıda Dükkânı',            'Kayısı',    '20 kg',  '11:00', 'tamamlandi', '2026-05-09', 72,  1440),
 (28, 'Taze Dükkan',              'Üzüm',      '25 kg',  '14:00', 'tamamlandi', '2026-05-09', 60,  1500),
 -- 10 Mayıs Pazar
 (29, 'Karadeniz Koop',           'Soğan',     '40 kg',  '10:00', 'tamamlandi', '2026-05-10', 12,  480),
 (30, 'Karadeniz Koop',           'Havuç',     '30 kg',  '10:30', 'tamamlandi', '2026-05-10', 15,  450),
 (31, 'Kooperatif Kantini',       'Mısır',     '14 kg',  '12:00', 'tamamlandi', '2026-05-10', 20,  280),
 -- 11 Mayıs Pazartesi
-(32, 'Migros Market',            'Domates',   '45 kg',  '09:00', 'tamamlandi', '2026-05-11', 24,  1080),
-(33, 'A101 Market',              'Biber',     '22 kg',  '10:00', 'tamamlandi', '2026-05-11', 38,  836),
+(32, 'Çukurova Restoran',            'Domates',   '45 kg',  '09:00', 'tamamlandi', '2026-05-11', 24,  1080),
+(33, 'Lezzet Lokantası',              'Biber',     '22 kg',  '10:00', 'tamamlandi', '2026-05-11', 38,  836),
 (34, 'Tatlıcı Şirin Koop.',      'Kayısı',    '20 kg',  '11:00', 'tamamlandi', '2026-05-11', 61,  1220),
 (35, 'Tatlıcı Şirin Koop.',      'İncir',     '15 kg',  '11:30', 'tamamlandi', '2026-05-11', 98,  1470),
 (36, 'Belediye Sosyal Market',   'Soğan',     '32 kg',  '14:00', 'tamamlandi', '2026-05-11', 14,  448),
 -- 12 Mayıs Salı (bugün)
-(37, 'Migros Market',            'Domates',   '35 kg',  '09:00', 'tamamlandi', '2026-05-12', 24,  840),
+(37, 'Çukurova Restoran',            'Domates',   '35 kg',  '09:00', 'tamamlandi', '2026-05-12', 24,  840),
 (38, 'Ege Bereket Koop',         'Salatalık', '30 kg',  '10:30', 'bekliyor',   '2026-05-12', 12,  360),
 (39, 'Ege Bereket Koop',         'Patlıcan',  '20 kg',  '11:00', 'bekliyor',   '2026-05-12', 24,  480),
-(40, 'Organik Pazar',            'Kayısı',    '9 kg',   '13:00', 'bekliyor',   '2026-05-12', 72,  648);
+(40, 'Doğal Gıda Dükkânı',            'Kayısı',    '9 kg',   '13:00', 'bekliyor',   '2026-05-12', 72,  648);
 
 SELECT setval('requests_id_seq', 40);
 
@@ -433,7 +433,7 @@ TRUNCATE ai_logs RESTART IDENTITY;
 INSERT INTO ai_logs (id, zaman, tarih, tip, baslik, mesaj, renk, kategori) VALUES
 -- 4 Mayıs
 (1,  '08:00', '4 Mayıs 2026',  'Rapor',   'Haftalık Başlangıç Özeti',       'Depo doluluk oranı %87. 10 üründe stok hazır, haftalık teslimat takvimi onaylandı.',                           'green', 'Depo'),
-(2,  '11:30', '4 Mayıs 2026',  'Tahmin',  'Hafta İçi Talep Tahmini',        'Migros ve A101 bu hafta 15% daha fazla domates talep edebilir. Üretici bildirimleri hazırlandı.',              'gold',  'Trend'),
+(2,  '11:30', '4 Mayıs 2026',  'Tahmin',  'Hafta İçi Talep Tahmini',        'Yerel restoranlar bu hafta 15% daha fazla domates talep edebilir. Üretici bildirimleri hazırlandı.',              'gold',  'Trend'),
 -- 5 Mayıs
 (3,  '09:15', '5 Mayıs 2026',  'Otomasyon','Tedarik Onayı',                 'Fatma Yıldız''dan 80 kg domates + 60 kg biber teslim alındı. Stok güncellendi.',                               'blue',  'Depo'),
 (4,  '14:00', '5 Mayıs 2026',  'Rapor',   'Günlük Özet',                    '5 sipariş tamamlandı, günlük gelir ₺8.043. Stok seviyeleri normal.',                                           'green', 'Raporlama'),
