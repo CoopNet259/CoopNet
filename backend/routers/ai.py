@@ -18,6 +18,65 @@ from services.logger import log_ai
 
 router = APIRouter(prefix="/api/ai", tags=["ai"])
 
+# ── Günlük cache (bellekte, aynı gün ikinci istek anında döner) ──
+_dashboard_cache: dict[str, dict] = {}
+
+
+# ── GET /api/ai/dashboard-brief ──────────────────────────────────
+
+DASHBOARD_BRIEF_SYSTEM = """Sen CoopNet AI'sın. Kooperatif yöneticisi için çok kısa, eyleme dönüştürülebilir bir sabah özeti yaz.
+
+Tam olarak 3 madde yaz. Her madde tek cümle, rakam içersin. Maddeleri düz metin olarak yaz, başlık veya markdown kullanma.
+Türkçe yaz."""
+
+
+@router.get("/dashboard-brief")
+async def dashboard_brief():
+    today = date_type.today().isoformat()
+
+    # Aynı gün için cache varsa anında dön
+    if today in _dashboard_cache:
+        return _dashboard_cache[today]
+
+    try:
+        ctx = await build_daily_context(today)
+        model = get_model(system_instruction=DASHBOARD_BRIEF_SYSTEM)
+
+        critical_names = ", ".join(i["name"] for i in ctx["inventory"] if i["is_critical"]) or "yok"
+        open_orders = ctx["orders"]["pending"]
+        total_orders = ctx["orders"]["total"]
+        done_tasks = ctx["tasks"]["done"]
+        total_tasks = ctx["tasks"]["total"]
+
+        prompt = f"""Kooperatif bugünkü durumu:
+- Açık sipariş: {open_orders} / toplam {total_orders}
+- Kritik stok ürünler: {critical_names}
+- Tamamlanan görev: {done_tasks}/{total_tasks}
+- Bekleyen hasat bildirimi: {len(ctx['harvests'])} adet
+
+Yukarıdaki verilere göre yöneticiye 3 kısa öneri/bilgi yaz."""
+
+        result = await asyncio.to_thread(model.generate_content, prompt)
+        lines = [
+            ln.lstrip("•-–*123456789. ").strip()
+            for ln in result.text.strip().splitlines()
+            if ln.strip() and not ln.strip().startswith("#")
+        ]
+        bullets = [ln for ln in lines if len(ln) > 10][:3]
+
+        response = {"date": today, "bullets": bullets, "cached": False}
+        _dashboard_cache[today] = {**response, "cached": True}
+        log_ai("daily_summary", f"dashboard_brief_{today}", {"summary": " | ".join(bullets)})
+        return response
+
+    except Exception as exc:
+        msg = str(exc)
+        is_rl = "429" in msg or "quota" in msg.lower()
+        raise HTTPException(
+            status_code=429 if is_rl else 500,
+            detail="AI şu an yoğun." if is_rl else "Özet oluşturulamadı."
+        )
+
 
 # ── POST /api/ai/chat ─────────────────────────────────────────
 

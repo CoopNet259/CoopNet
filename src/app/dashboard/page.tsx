@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './dashboard.css';
-import { getDashboardSummary, patchTask, type DashboardSummary, type StockItem, type OrderItem, type TaskItem } from '@/lib/api/client';
+import { getDashboardSummary, patchTask, getDashboardBrief, type DashboardSummary, type StockItem, type OrderItem, type TaskItem, type DashboardBrief } from '@/lib/api/client';
 import NotifBell from './components/NotifBell';
 
 /* ── Icons ── */
@@ -83,6 +83,9 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [brief, setBrief] = useState<DashboardBrief | null>(null);
+  const [briefLoading, setBriefLoading] = useState(true);
+  const [briefError, setBriefError] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setBarsReady(true), 150);
@@ -93,6 +96,12 @@ export default function DashboardPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
+
+    getDashboardBrief()
+      .then(data => { setBrief(data); setBriefError(false); })
+      .catch(() => setBriefError(true))
+      .finally(() => setBriefLoading(false));
+
     return () => clearTimeout(t);
   }, []);
 
@@ -500,28 +509,35 @@ export default function DashboardPage() {
                 <span className="ai-chip">AI · Gemini</span>
                 <span className="ai-ozet-title">Günlük AI Analizi — {summary ? parseTrDate(summary.date) : '—'}</span>
               </div>
-              <ul className="ai-ozet-list">
-                {summary && summary.kpis.critical_stock > 0 && (
-                  <li><span className="ai-bullet">›</span>
-                    Depoda {summary.kpis.critical_stock} ürün kritik stok seviyesinin altında. Öncelikli sipariş gerekiyor.
-                  </li>
-                )}
-                {summary && (
-                  <li><span className="ai-bullet">›</span>
-                    Bugün {summary.kpis.open_orders} açık sipariş var. Talep trendi geçen haftaya göre {summary.kpis.order_trend_pct >= 0 ? '+' : ''}{summary.kpis.order_trend_pct}%.
-                  </li>
-                )}
-                {summary && summary.kpis.open_tasks > 0 && (
-                  <li><span className="ai-bullet">›</span>
-                    {summary.kpis.open_tasks} görev bekliyor. Depo ve operasyon ekibi bilgilendirilmeli.
-                  </li>
-                )}
-                {summary && summary.kpis.harvest_kg_week > 0 && (
-                  <li><span className="ai-bullet">›</span>
-                    Bu hafta {summary.kpis.harvest_kg_week} kg hasat bildirimi yapıldı. Stok güncellemeleri takip edilmeli.
-                  </li>
-                )}
-              </ul>
+
+              {/* Yükleniyor */}
+              {briefLoading && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '4px 0' }}>
+                  {[80, 65, 72].map((w, i) => (
+                    <div key={i} style={{
+                      height: 14, borderRadius: 6, background: 'linear-gradient(90deg,#e8f5e9 25%,#c8e6c9 50%,#e8f5e9 75%)',
+                      backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite',
+                      width: `${w}%`, opacity: 0.7
+                    }} />
+                  ))}
+                </div>
+              )}
+
+              {/* Hata */}
+              {!briefLoading && briefError && (
+                <div style={{ color: 'var(--text-muted)', fontSize: 13, padding: '8px 0' }}>
+                  AI özeti şu an alınamadı. Backend çalışıyor mu?
+                </div>
+              )}
+
+              {/* Gerçek AI içeriği */}
+              {!briefLoading && !briefError && brief && (
+                <ul className="ai-ozet-list">
+                  {brief.bullets.map((bullet, i) => (
+                    <li key={i}><span className="ai-bullet">›</span>{bullet}</li>
+                  ))}
+                </ul>
+              )}
             </div>
           </section>
 

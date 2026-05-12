@@ -466,3 +466,13 @@ export interface NotificationsResponse {
 
 export const getNotifications = () =>
   api<NotificationsResponse>('/api/notifications');
+
+// ── AI Dashboard Brief ────────────────────────────────────────
+export interface DashboardBrief {
+  date: string;
+  bullets: string[];
+  cached: boolean;
+}
+
+export const getDashboardBrief = () =>
+  api<DashboardBrief>('/api/ai/dashboard-brief');
