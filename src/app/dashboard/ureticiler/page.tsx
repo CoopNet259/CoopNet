@@ -199,7 +199,7 @@ export default function UreticilerPage() {
                     </div>
                     <div className="uretici-detay">
                       <div className="uretici-urunler">
-                        {uretici.urunler.map((u, i) => <span key={i} className="urun-badge">{u}</span>)}
+                        {(uretici.urunler ?? []).map((u: string, i: number) => <span key={i} className="urun-badge">{u}</span>)}
                       </div>
                       <div className="uretici-kapasite">
                         <Icon d={icons.warehouse} size={12} /> Kapasite: <strong>{uretici.kapasite}</strong>
@@ -236,7 +236,7 @@ export default function UreticilerPage() {
                     </div>
                     <div className="uretici-detay">
                       <div className="uretici-urunler">
-                        {uretici.urunler.map((u, i) => <span key={i} className="urun-badge">{u}</span>)}
+                        {(uretici.urunler ?? []).map((u: string, i: number) => <span key={i} className="urun-badge">{u}</span>)}
                       </div>
                       <div className="uretici-kapasite" style={{ marginBottom: 4 }}>
                         <Icon d={icons.warehouse} size={12} /> Kapasite: <strong>{uretici.kapasite}</strong>

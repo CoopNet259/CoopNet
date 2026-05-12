@@ -8,6 +8,10 @@ import {
   WhatsAppDemoResult,
   getHarvestMessages,
   HarvestMessagesResponse,
+  getApprovals,
+  approveRequest,
+  rejectRequest,
+  PendingApproval,
 } from '@/lib/api/client';
 
 // ── Tipler ──────────────────────────────────────────────────────────────
@@ -98,11 +102,20 @@ function actionCount(impact: string) {
 export default function UreticiMesajPage() {
   const router = useRouter();
 
+  // Sekme
+  const [activeTab, setActiveTab] = useState<'messages' | 'approvals'>('messages');
+
   // Feed state
   const [feedData, setFeedData] = useState<HarvestMessagesResponse | null>(null);
   const [feedLoading, setFeedLoading] = useState(true);
   const [messages, setMessages] = useState<IncomingMessage[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Onay kuyruğu state
+  const [approvals, setApprovals] = useState<PendingApproval[]>([]);
+  const [approvalsLoading, setApprovalsLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [actionFeedback, setActionFeedback] = useState<{id: number; type: 'ok' | 'err'; msg: string} | null>(null);
 
   // Demo/test paneli
   const [showTest, setShowTest] = useState(false);
@@ -132,7 +145,39 @@ export default function UreticiMesajPage() {
     }
   }, []);
 
+  const loadApprovals = useCallback(async () => {
+    setApprovalsLoading(true);
+    try {
+      const data = await getApprovals();
+      setApprovals(data);
+    } catch { /* sessiz */ }
+    finally { setApprovalsLoading(false); }
+  }, []);
+
   useEffect(() => { loadFeed(); }, [loadFeed]);
+  useEffect(() => { if (activeTab === 'approvals') loadApprovals(); }, [activeTab, loadApprovals]);
+
+  async function handleApprove(id: number) {
+    setActionLoading(id);
+    try {
+      const res = await approveRequest(id);
+      setActionFeedback({ id, type: 'ok', msg: res.message ?? 'Onaylandı, depo görevi oluşturuldu.' });
+      setApprovals(prev => prev.filter(a => a.id !== id));
+    } catch (e: unknown) {
+      setActionFeedback({ id, type: 'err', msg: e instanceof Error ? e.message : 'Hata oluştu.' });
+    } finally { setActionLoading(null); }
+  }
+
+  async function handleReject(id: number) {
+    setActionLoading(id);
+    try {
+      await rejectRequest(id);
+      setActionFeedback({ id, type: 'ok', msg: 'Talep reddedildi.' });
+      setApprovals(prev => prev.filter(a => a.id !== id));
+    } catch (e: unknown) {
+      setActionFeedback({ id, type: 'err', msg: e instanceof Error ? e.message : 'Hata oluştu.' });
+    } finally { setActionLoading(null); }
+  }
 
   // Seçili mesaj
   const selected = messages.find(m => m.id === selectedId) ?? null;
@@ -144,7 +189,14 @@ export default function UreticiMesajPage() {
     setTestResult(null);
     try {
       const result = await postWhatsAppDemo(text.trim(), testProducer.name);
-      setTestResult(`✅ Mesaj işlendi — ${result.executed_actions.length} aksiyon alındı.`);
+      const decisions = result.results ?? [];
+      const label = decisions.map(r => {
+        if (r.decision === 'otomatik_kabul')   return `✅ ${r.product}: kabul (${r.needed} kg)`;
+        if (r.decision === 'ihtiyac_yok')      return `❌ ${r.product}: ihtiyaç yok`;
+        if (r.decision === 'onay_bekleniyor')  return `⏳ ${r.product}: yönetici onayı bekleniyor`;
+        return r.product;
+      }).join(' · ') || 'İşlendi';
+      setTestResult(`${label}`);
       setTestInput('');
       // Feed'i yenile
       await loadFeed();
@@ -156,10 +208,11 @@ export default function UreticiMesajPage() {
   }
 
   // İstatistikler
-  const totalMessages = messages.length;
-  const totalTasks = feedData?.tasks.length ?? 0;
-  const criticalTasks = feedData?.tasks.filter(t => t.priority === 'yuksek').length ?? 0;
-  const pendingTasks = feedData?.tasks.filter(t => !t.done).length ?? 0;
+  const totalMessages  = messages.length;
+  const totalTasks     = feedData?.tasks.length ?? 0;
+  const criticalTasks  = feedData?.tasks.filter(t => t.priority === 'yuksek').length ?? 0;
+  const pendingTasks   = feedData?.tasks.filter(t => !t.done).length ?? 0;
+  const pendingApprovalCount = approvals.length;
 
   return (
     <div className="coopnet-root">
@@ -274,9 +327,149 @@ export default function UreticiMesajPage() {
               <div className="stat-value">{feedLoading ? '—' : pendingTasks}</div>
             </div>
           </div>
+          <div className="stat-card" style={{ cursor: 'pointer' }} onClick={() => setActiveTab('approvals')}>
+            <div className="stat-icon-wrap" style={{ background: 'rgba(245,158,11,0.12)', color: '#d97706' }}>⏳</div>
+            <div>
+              <div className="stat-label">Onay Bekleyen</div>
+              <div className="stat-value" style={{ color: pendingApprovalCount > 0 ? '#d97706' : undefined }}>
+                {approvalsLoading ? '—' : pendingApprovalCount}
+              </div>
+            </div>
+          </div>
         </div>
 
+        {/* Sekmeler */}
+        <div className="tab-bar">
+          <button
+            className={`tab-btn${activeTab === 'messages' ? ' active' : ''}`}
+            onClick={() => setActiveTab('messages')}
+          >
+            📨 Gelen Mesajlar
+            {totalMessages > 0 && <span className="tab-badge">{totalMessages}</span>}
+          </button>
+          <button
+            className={`tab-btn${activeTab === 'approvals' ? ' active' : ''}`}
+            onClick={() => setActiveTab('approvals')}
+          >
+            ⏳ Bekleyen Onaylar
+            {pendingApprovalCount > 0 && (
+              <span className="tab-badge warn">{pendingApprovalCount}</span>
+            )}
+          </button>
+        </div>
+
+        {/* ── ONAY SEKMESİ ── */}
+        {activeTab === 'approvals' && (
+          <div className="approvals-panel">
+            <div className="approvals-header">
+              <span className="approvals-title">Yönetici Onay Kuyruğu</span>
+              <button className="refresh-btn" onClick={loadApprovals} disabled={approvalsLoading}>
+                <Icon d={icons.refresh} size={13} />
+                {approvalsLoading ? 'Yükleniyor…' : 'Yenile'}
+              </button>
+            </div>
+
+            {approvalsLoading && <div className="loading-dots"><span /><span /><span /></div>}
+
+            {!approvalsLoading && approvals.length === 0 && (
+              <div className="approvals-empty">
+                <div style={{ fontSize: 40 }}>✅</div>
+                <div className="feed-empty-title">Bekleyen onay yok</div>
+                <div className="feed-empty-sub">
+                  Stok %25–75 arasında olan hasat teklifleri burada görünecek.
+                </div>
+              </div>
+            )}
+
+            <div className="approvals-list">
+              {approvals.map(a => {
+                const isBusy  = actionLoading === a.id;
+                const feedback = actionFeedback?.id === a.id ? actionFeedback : null;
+                const timeAgo  = new Date(a.olusturuldu).toLocaleString('tr-TR', {
+                  day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+                });
+                const hoursLeft = Math.max(0, 12 - Math.round(
+                  (Date.now() - new Date(a.olusturuldu).getTime()) / 3600000
+                ));
+
+                return (
+                  <div key={a.id} className="approval-card">
+                    <div className="approval-card-top">
+                      <div className="approval-producer">
+                        <div className="approval-avatar">
+                          {a.uretici_adi.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="approval-name">{a.uretici_adi}</div>
+                          <div className="approval-phone">{a.uretici_telefon}</div>
+                        </div>
+                      </div>
+                      <div className="approval-timer">
+                        <span className="approval-timer-icon">⏱️</span>
+                        <span>{hoursLeft}s kaldı</span>
+                      </div>
+                    </div>
+
+                    <div className="approval-body">
+                      <div className="approval-msg">"{a.ham_mesaj}"</div>
+                      <div className="approval-details">
+                        <div className="approval-detail-item">
+                          <span className="approval-detail-label">Ürün</span>
+                          <span className="approval-detail-value">{a.urun_adi}</span>
+                        </div>
+                        <div className="approval-detail-item">
+                          <span className="approval-detail-label">Talep</span>
+                          <span className="approval-detail-value">{a.talep_miktari} {a.birim}</span>
+                        </div>
+                        <div className="approval-detail-item">
+                          <span className="approval-detail-label">Alabiliriz</span>
+                          <span className="approval-detail-value" style={{ color: 'var(--green-600)', fontWeight: 700 }}>
+                            {a.kabul_miktari} {a.birim}
+                          </span>
+                        </div>
+                        <div className="approval-detail-item">
+                          <span className="approval-detail-label">Stok</span>
+                          <span className="approval-detail-value">
+                            <span className={`stock-pct-badge ${a.stok_doluluk < 40 ? 'warn' : 'ok'}`}>
+                              %{a.stok_doluluk}
+                            </span>
+                          </span>
+                        </div>
+                      </div>
+                      <div className="approval-time-note">📅 {timeAgo}</div>
+                    </div>
+
+                    {feedback ? (
+                      <div className={`approval-feedback ${feedback.type}`}>
+                        {feedback.type === 'ok' ? '✅' : '❌'} {feedback.msg}
+                      </div>
+                    ) : (
+                      <div className="approval-actions">
+                        <button
+                          className="approve-btn"
+                          onClick={() => handleApprove(a.id)}
+                          disabled={isBusy}
+                        >
+                          {isBusy ? <span className="spinner-sm" /> : '✓'} Onayla
+                        </button>
+                        <button
+                          className="reject-btn"
+                          onClick={() => handleReject(a.id)}
+                          disabled={isBusy}
+                        >
+                          {isBusy ? <span className="spinner-sm" /> : '✕'} Reddet
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Content */}
+        {activeTab === 'messages' && (
         <div className="umesaj-content">
           {/* ── Sol: Gelen mesaj akışı ── */}
           <div className="feed-column">
@@ -406,85 +599,37 @@ export default function UreticiMesajPage() {
                   {/* Eğer demo'dan gelen ve analiz verisi varsa göster */}
                   {selected.analysisResult ? (
                     <>
-                      {selected.analysisResult.parsed && (
-                        <div className="analysis-section">
+                      {(selected.analysisResult.results ?? []).map((r, i) => (
+                        <div key={i} className="analysis-section">
                           <div className="analysis-section-header">
-                            <span className="analysis-section-title">AI Parse Sonucu</span>
-                            <span className={`conf-badge ${confClass(selected.analysisResult.confidence_label)}`}>
-                              {selected.analysisResult.confidence_label} Güven
+                            <span className="analysis-section-title">{r.product.charAt(0).toUpperCase() + r.product.slice(1)}</span>
+                            <span style={{ fontSize: 12, fontWeight: 700, padding: '2px 10px', borderRadius: 999,
+                              background: r.decision === 'otomatik_kabul' ? 'rgba(56,153,106,0.1)' : r.decision === 'ihtiyac_yok' ? 'var(--red-100)' : '#fef3c7',
+                              color: r.decision === 'otomatik_kabul' ? 'var(--green-600)' : r.decision === 'ihtiyac_yok' ? 'var(--red-500)' : '#d97706' }}>
+                              {r.decision === 'otomatik_kabul' ? '✅ Otomatik Kabul' : r.decision === 'ihtiyac_yok' ? '❌ İhtiyaç Yok' : '⏳ Onay Bekliyor'}
                             </span>
                           </div>
                           <div className="analysis-section-body">
                             <div className="kv-grid">
                               <div className="kv-item">
-                                <div className="kv-label">Ürün</div>
-                                <div className="kv-value">{selected.analysisResult.parsed.product_name}</div>
+                                <div className="kv-label">Teklif</div>
+                                <div className="kv-value">{r.quantity} kg</div>
                               </div>
                               <div className="kv-item">
-                                <div className="kv-label">Miktar</div>
-                                <div className="kv-value">{selected.analysisResult.parsed.quantity} {selected.analysisResult.parsed.unit}</div>
+                                <div className="kv-label">Alınacak</div>
+                                <div className="kv-value" style={{ color: 'var(--green-600)' }}>{r.needed} kg</div>
                               </div>
-                              {selected.analysisResult.parsed.available_time && (
-                                <div className="kv-item full">
-                                  <div className="kv-label">Teslim Saati</div>
-                                  <div className="kv-value">{selected.analysisResult.parsed.available_time}</div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {selected.analysisResult.stock_status && (
-                        <div className="analysis-section">
-                          <div className="analysis-section-header">
-                            <span className="analysis-section-title">Stok Durumu</span>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: selected.analysisResult.stock_status.is_critical ? 'var(--red-500)' : 'var(--green-600)' }}>
-                              %{Math.round(selected.analysisResult.stock_status.fill_percentage)} dolu
-                            </span>
-                          </div>
-                          <div className="analysis-section-body">
-                            <div className="stock-bar-row">
-                              <span style={{ fontSize: 13, color: 'var(--grey-700)' }}>
-                                {selected.analysisResult.stock_status.current_quantity} {selected.analysisResult.stock_status.unit} mevcut
-                              </span>
-                            </div>
-                            <div className="stock-bar-track">
-                              <div
-                                className={`stock-bar-fill ${stockClass(selected.analysisResult.stock_status.fill_percentage, selected.analysisResult.stock_status.is_critical)}`}
-                                style={{ width: `${Math.min(selected.analysisResult.stock_status.fill_percentage, 100)}%` }}
-                              />
-                            </div>
-                            {selected.analysisResult.stock_status.is_critical && (
-                              <div className="stock-critical-note">⚠️ Kritik stok — yöneticiye uyarı gönderildi</div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {selected.analysisResult.executed_actions.length > 0 && (
-                        <div className="actions-section">
-                          <div className="actions-header">
-                            <span className="actions-title">Otomatik Aksiyonlar</span>
-                            <span className="actions-count">{selected.analysisResult.executed_actions.length}</span>
-                          </div>
-                          <div className="actions-list">
-                            {selected.analysisResult.executed_actions.map((a, i) => (
-                              <div key={i} className="action-row">
-                                <span className="action-icon">✅</span>
-                                <span className="action-text">{a}</span>
+                              <div className="kv-item">
+                                <div className="kv-label">Stok</div>
+                                <div className="kv-value">%{r.fill_pct}</div>
                               </div>
-                            ))}
+                            </div>
+                            <div style={{ marginTop: 8, padding: '8px 12px', background: 'var(--grey-50)', borderRadius: 6, fontSize: 13, color: 'var(--grey-600)', lineHeight: 1.5 }}>
+                              {r.reply_line}
+                            </div>
                           </div>
                         </div>
-                      )}
-
-                      {selected.analysisResult.confidence_warning && (
-                        <div className="warn-row">
-                          <span className="warn-icon">ℹ️</span>
-                          <span className="warn-text">{selected.analysisResult.confidence_warning}</span>
-                        </div>
-                      )}
+                      ))}
                     </>
                   ) : (
                     /* DB'den gelen eski mesaj — impact metni var ama detaylı analiz yok */
@@ -540,6 +685,7 @@ export default function UreticiMesajPage() {
             )}
           </div>
         </div>
+        )}
 
         {/* ── Test Paneli (overlay — sağ altta) ── */}
         {showTest && (

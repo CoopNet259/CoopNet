@@ -386,3 +386,95 @@ async def ai_reports():
     sb = get_supabase()
     res = sb.table("ai_reports").select("*").order("id").execute()
     return res.data or []
+
+
+# ── GET /api/ai/decisions ─────────────────────────────────────
+
+KARAR_LABEL: dict[str, str] = {
+    "otomatik_kabul":         "✅ Otomatik Kabul",
+    "onay_bekleniyor":        "⏳ Onay Bekleniyor",
+    "ihtiyac_yok":            "⛔ İhtiyaç Yok",
+    "teklif_gonderildi":      "📨 Teklif Gönderildi",
+    "manuel_teklif_gonderildi": "📨 Teklif Gönderildi",
+    "depo_gorevi_olusturuldu": "🏭 Depo Görevi",
+    "kardes_uretici_yok":     "⚠️ Kardeş Üretici Yok",
+    "satis_onaylandi":        "✅ Satış Onaylandı",
+    "gorев_olusturuldu":      "🏭 Depo Görevi",
+    "zaman_asimi":            "⏱️ Zaman Aşımı",
+    "reddedildi":             "❌ Reddedildi",
+    "onaylandi":              "✅ Onaylandı",
+}
+
+AJAN_LABEL: dict[str, str] = {
+    "waste_prevention": "İsraf Önleme",
+    "whatsapp_harvest": "WhatsApp Hasat",
+    "approval":         "Onay Sistemi",
+    "stock_check":      "Stok Kontrolü",
+    "morning_briefing": "Sabah Planı",
+    "evening_summary":  "Akşam Özeti",
+}
+
+AJAN_ICON: dict[str, str] = {
+    "waste_prevention": "♻️",
+    "whatsapp_harvest": "📱",
+    "approval":         "✅",
+    "stock_check":      "📦",
+    "morning_briefing": "☀️",
+    "evening_summary":  "🌙",
+}
+
+
+@router.get("/decisions")
+async def ai_decisions(limit: int = Query(50, ge=1, le=200)):
+    """
+    agent_decisions tablosunu döndürür.
+    Talepler sayfasından gönderilen teklifler, depo görevleri,
+    WhatsApp kararları gibi tüm ajan aksiyonları burada toplanır.
+    """
+    sb = get_supabase()
+    res = (
+        sb.table("agent_decisions")
+        .select("*")
+        .order("olusturuldu", desc=True)
+        .limit(limit)
+        .execute()
+    )
+    rows = res.data or []
+
+    items = []
+    for r in rows:
+        ajan      = r.get("ajan", "")
+        karar     = r.get("karar", "")
+        meta      = r.get("meta") or {}
+        olusturuldu = r.get("olusturuldu", "")
+
+        # Zaman formatla
+        try:
+            from datetime import datetime, timezone
+            dt = datetime.fromisoformat(olusturuldu.replace("Z", "+00:00"))
+            dt_local = dt.astimezone()
+            saat = dt_local.strftime("%H:%M")
+            tarih = dt_local.strftime("%d.%m.%Y")
+        except Exception:
+            saat  = ""
+            tarih = ""
+
+        items.append({
+            "id":          r.get("id"),
+            "ajan":        ajan,
+            "ajan_label":  AJAN_LABEL.get(ajan, ajan),
+            "ajan_icon":   AJAN_ICON.get(ajan, "🤖"),
+            "karar":       karar,
+            "karar_label": KARAR_LABEL.get(karar, karar),
+            "aciklama":    r.get("aciklama", ""),
+            "tetikleyen":  r.get("tetikleyen", ""),
+            "meta":        meta,
+            "saat":        saat,
+            "tarih":       tarih,
+            "raw_time":    olusturuldu,
+        })
+
+    return {
+        "total": len(items),
+        "items": items,
+    }

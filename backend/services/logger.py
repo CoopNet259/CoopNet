@@ -12,41 +12,65 @@ def _tr_date(dt: datetime) -> str:
     return f"{dt.day:02d} {_TR_MONTHS[dt.month - 1]} {dt.year}"
 
 ActionType = Literal[
-    "harvest_analyze", "chat", "daily_summary", "draft_email",
+    "harvest_analyze", "whatsapp_harvest", "whatsapp_harvest_demo",
+    "chat", "daily_summary", "draft_email",
     "draft_notification", "stock_check", "anomaly_check", "weekly_insight",
+    "morning_briefing", "evening_summary", "weekly_briefing",
+    "timeout_check", "waste_prevention",
 ]
 
 _TIP_MAP: dict[str, str] = {
-    "harvest_analyze": "Otomasyon",
-    "chat": "Rapor",
-    "daily_summary": "Rapor",
-    "draft_email": "Otomasyon",
-    "draft_notification": "Otomasyon",
-    "stock_check": "Anomali",
-    "anomaly_check": "Anomali",
-    "weekly_insight": "Rapor",
+    "harvest_analyze":       "Otomasyon",
+    "whatsapp_harvest":      "Otomasyon",
+    "whatsapp_harvest_demo": "Otomasyon",
+    "chat":                  "Rapor",
+    "daily_summary":         "Rapor",
+    "draft_email":           "Otomasyon",
+    "draft_notification":    "Otomasyon",
+    "stock_check":           "Anomali",
+    "anomaly_check":         "Anomali",
+    "weekly_insight":        "Rapor",
+    "morning_briefing":      "Rapor",
+    "evening_summary":       "Rapor",
+    "weekly_briefing":       "Rapor",
+    "timeout_check":         "Otomasyon",
+    "waste_prevention":      "Otomasyon",
 }
 
 _KATEGORI_MAP: dict[str, str] = {
-    "harvest_analyze": "Depo",
-    "chat": "AI Tespiti",
-    "daily_summary": "Raporlama",
-    "draft_email": "İletişim",
-    "draft_notification": "İletişim",
-    "stock_check": "Depo",
-    "anomaly_check": "AI Tespiti",
-    "weekly_insight": "Raporlama",
+    "harvest_analyze":       "Depo",
+    "whatsapp_harvest":      "Depo",
+    "whatsapp_harvest_demo": "Depo",
+    "chat":                  "AI Tespiti",
+    "daily_summary":         "Raporlama",
+    "draft_email":           "İletişim",
+    "draft_notification":    "İletişim",
+    "stock_check":           "Depo",
+    "anomaly_check":         "AI Tespiti",
+    "weekly_insight":        "Raporlama",
+    "morning_briefing":      "Raporlama",
+    "evening_summary":       "Raporlama",
+    "weekly_briefing":       "Raporlama",
+    "timeout_check":         "İletişim",
+    "waste_prevention":      "Depo",
 }
 
 _BASLIK_MAP: dict[str, str] = {
-    "harvest_analyze": "Hasat analizi yapıldı",
-    "chat": "Sohbet isteği yanıtlandı",
-    "daily_summary": "Günlük özet oluşturuldu",
-    "draft_email": "Tedarikçi mail taslağı hazırlandı",
-    "draft_notification": "Müşteri bildirimi taslağı hazırlandı",
-    "stock_check": "Stok kontrolü yapıldı",
-    "anomaly_check": "Anomali taraması tamamlandı",
-    "weekly_insight": "Haftalık özet oluşturuldu",
+    "harvest_analyze":       "Hasat analizi yapıldı",
+    "whatsapp_harvest":      "Hasat analizi yapıldı",
+    "whatsapp_harvest_demo": "Hasat analizi yapıldı",
+    "chat":                  "Sohbet isteği yanıtlandı",
+    "daily_summary":         "Günlük özet oluşturuldu",
+    "draft_email":           "Tedarikçi mail taslağı hazırlandı",
+    "draft_notification":    "Müşteri bildirimi taslağı hazırlandı",
+    "stock_check":           "Stok kontrolü yapıldı",
+    "anomaly_check":         "Anomali taraması tamamlandı",
+    "weekly_insight":        "Haftalık özet oluşturuldu",
+    "morning_briefing":      "Sabah aksiyon planı hazırlandı",
+    "evening_summary":       "Gün sonu özeti oluşturuldu",
+    "weekly_briefing":       "Haftalık özet oluşturuldu",
+    "timeout_check":         "Onay zaman aşımı kontrolü yapıldı",
+    "waste_prevention":      "İsraf önleme taraması yapıldı",
 }
 
 
@@ -79,4 +103,14 @@ def _extract_impact(action_type: str, data: Any) -> str:
     if action_type == "harvest_analyze":
         executed = len(data.get("executed_actions", []))
         return f"{executed} otomatik aksiyon alındı" if executed else "öneri üretildi"
+    if action_type in ("whatsapp_harvest", "whatsapp_harvest_demo"):
+        results = data.get("results", [])
+        labels = []
+        for r in results:
+            d = r.get("decision", "")
+            urun = r.get("product", "ürün")
+            if d == "otomatik_kabul":    labels.append(f"{urun}: kabul ({r.get('needed',0)} kg)")
+            elif d == "ihtiyac_yok":     labels.append(f"{urun}: ihtiyaç yok")
+            elif d == "onay_bekleniyor": labels.append(f"{urun}: onay bekleniyor")
+        return " · ".join(labels) if labels else "işlendi"
     return "iş akışına dahil edildi"

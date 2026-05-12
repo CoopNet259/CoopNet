@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './depo.css';
-import { getDashboardSummary, type StockItem } from '@/lib/api/client';
+import { getAllStock, type StockItem } from '@/lib/api/client';
 
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 function todayTr(): string { const n = new Date(); return `${n.getDate()} ${TR_MONTHS[n.getMonth()]} ${n.getFullYear()}`; }
@@ -100,8 +100,8 @@ export default function DepoPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getDashboardSummary()
-      .then(data => setStokVerisi(data.stock))
+    getAllStock()
+      .then(data => setStokVerisi(data))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);

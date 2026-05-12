@@ -363,3 +363,48 @@
   .header { padding: 0 16px; }
   .warnings-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Tab bar ──────────────────────────────────────────────────────────────── */
+.logs-tab-bar{display:flex;gap:4px;padding:16px 24px 0;background:#fff;border-bottom:1px solid var(--grey-200);}
+.logs-tab{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;font-size:13px;font-weight:600;color:var(--grey-500);background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:inherit;transition:color 0.15s,border-color 0.15s;margin-bottom:-1px;}
+.logs-tab:hover{color:var(--grey-800);}
+.logs-tab.logs-tab-active{color:var(--green-700);border-bottom-color:var(--green-500);}
+.logs-tab-count{font-size:11px;font-weight:800;padding:2px 7px;border-radius:10px;background:var(--grey-100);color:var(--grey-500);}
+.logs-tab-active .logs-tab-count{background:var(--green-100);color:var(--green-700);}
+
+/* ── Ajan Kararları Panel ─────────────────────────────────────────────────── */
+.decisions-panel{background:#fff;border-radius:var(--radius-lg);border:1px solid var(--grey-200);overflow:hidden;box-shadow:var(--shadow-sm);margin-top:20px;}
+.decisions-header-row{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--grey-100);}
+.decisions-header-row h3{font-size:15px;font-weight:700;color:var(--grey-800);margin:0;}
+.decisions-header-row p{font-size:12px;color:var(--grey-500);margin:3px 0 0;}
+.decisions-loading{padding:32px;text-align:center;color:var(--grey-400);font-size:13px;}
+.decisions-empty{padding:48px;text-align:center;color:var(--grey-400);}
+.decisions-empty span{display:block;font-size:36px;margin-bottom:10px;}
+.decisions-empty p{font-size:13px;margin:0;}
+
+/* Table */
+.decisions-table-wrap{overflow-x:auto;}
+.decisions-table{width:100%;border-collapse:collapse;font-size:13px;}
+.decisions-table thead tr{background:var(--grey-50);border-bottom:1px solid var(--grey-200);}
+.decisions-table th{padding:10px 16px;text-align:left;font-size:11.5px;font-weight:700;color:var(--grey-500);text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;}
+.decisions-table tbody tr{border-bottom:1px solid var(--grey-50);transition:background 0.1s;}
+.decisions-table tbody tr:last-child{border-bottom:none;}
+.decisions-table tbody tr:hover{background:var(--grey-50);}
+.decisions-table td{padding:11px 16px;vertical-align:middle;}
+
+.td-time{white-space:nowrap;}
+.td-saat{display:block;font-size:13px;font-weight:700;color:var(--grey-800);}
+.td-tarih{display:block;font-size:11px;color:var(--grey-400);margin-top:1px;}
+
+.td-ajan{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--grey-700);background:var(--grey-100);padding:3px 9px;border-radius:20px;white-space:nowrap;}
+
+.td-karar{display:inline-block;font-size:12px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+.karar-otomatik_kabul,.karar-satis_onaylandi,.karar-onaylandi{background:var(--green-50);color:var(--green-700);}
+.karar-teklif_gonderildi,.karar-manuel_teklif_gonderildi{background:var(--blue-50);color:var(--blue-600);}
+.karar-depo_gorevi_olusturuldu,.karar-gorев_olusturuldu{background:var(--purple-50);color:var(--purple-600);}
+.karar-onay_bekleniyor{background:var(--gold-50,#fffbeb);color:var(--gold-500,#d97706);}
+.karar-ihtiyac_yok,.karar-kardes_uretici_yok{background:var(--grey-100);color:var(--grey-600);}
+.karar-reddedildi,.karar-zaman_asimi{background:var(--red-50);color:var(--red-600);}
+
+.td-aciklama{max-width:340px;color:var(--grey-700);line-height:1.45;}
+.td-tetikleyen{color:var(--grey-400);font-size:12px;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;}
