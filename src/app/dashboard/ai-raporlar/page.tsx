@@ -444,29 +444,60 @@ export default function AIRaporlarPage() {
                   </div>
                 </div>
 
-                {/* ALT: AI Öngörüleri (tam genişlik) */}
+                {/* ALT: Aksiyon Önerileri (tam genişlik) — sadece gerçek veri varsa göster */}
                 {(() => {
-                  const oneriler = selectedReport.maddeler.filter(m => m.toLowerCase().startsWith('öneri'));
-                  const fallback = [
-                    'AI raporları sistemdeki en önemli değişiklikleri öne çıkarır.',
-                    'Her rapor, depo ve talep verileri baz alınarak üretilir.',
-                    'Aksiyon önerileri gerçek zamanlı verilere dayanır.',
-                  ];
-                  const items = oneriler.length > 0 ? oneriler : fallback;
+                  // Günlük rapor maddelerinden aksiyon içerenleri çek
+                  const ACTION_KW = /kritik|acil|öneri|uyarı|risk|transfer|tedarik|planla|kontrol|takip/i;
+                  const dailyActions = selectedReport.maddeler.filter(m => ACTION_KW.test(m));
+
+                  // Haftalık rapordaki AI recommended_actions
+                  const weeklyActions = weeklyInsight?.recommended_actions ?? [];
+
+                  // İkisi de boşsa bölümü gösterme
+                  if (dailyActions.length === 0 && weeklyActions.length === 0) return null;
+
                   return (
                     <div className="arv-insights">
                       <div className="arv-insights-header">
                         <Icon d={icons.bulb} size={16} />
-                        <h3>AI Öngörüleri</h3>
+                        <h3>Aksiyon Önerileri</h3>
+                        <span className="arv-insights-badge">
+                          {dailyActions.length + weeklyActions.length} madde
+                        </span>
                       </div>
-                      <div className="arv-insights-list">
-                        {items.map((item, idx) => (
-                          <div key={idx} className="arv-insight-item">
-                            <span className="arv-insight-num">{idx + 1}</span>
-                            <p>{item.replace(/^öneri:\s*/i, '')}</p>
+
+                      {/* Günlük rapordan çekilen gerçek maddeler */}
+                      {dailyActions.length > 0 && (
+                        <div className="arv-insights-section">
+                          <p className="arv-insights-section-label">📋 Günlük Rapor Aksiyonları</p>
+                          <div className="arv-insights-list">
+                            {dailyActions.map((item, idx) => {
+                              const { d, cls } = bulletIcon(item);
+                              return (
+                                <div key={idx} className={`arv-insight-item arv-insight-colored ${cls}`}>
+                                  <div className="arv-insight-icon"><Icon d={d} size={14} /></div>
+                                  <p>{item.replace(/^öneri:\s*/i, '')}</p>
+                                </div>
+                              );
+                            })}
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      )}
+
+                      {/* Haftalık AI tavsiyesi */}
+                      {weeklyActions.length > 0 && (
+                        <div className="arv-insights-section">
+                          <p className="arv-insights-section-label">🤖 Haftalık AI Tavsiyeleri</p>
+                          <div className="arv-weekly-actions arv-insights-actions">
+                            {weeklyActions.map((a, i) => (
+                              <div key={i} className={`arv-waction arv-waction-${a.tone}`}>
+                                <strong>{a.title}</strong>
+                                <span>{a.meta}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })()}

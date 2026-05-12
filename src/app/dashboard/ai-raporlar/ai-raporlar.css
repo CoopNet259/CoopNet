@@ -141,12 +141,32 @@
 .arv-insights { background: #fff; border: 1px solid var(--grey-200); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 24px; }
 .arv-insights-header { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--grey-100); background: var(--grey-50); }
 .arv-insights-header svg { color: var(--purple-500); }
-.arv-insights-header h3 { margin: 0; font-size: 14px; font-weight: 700; color: var(--grey-800); }
+.arv-insights-header h3 { margin: 0; font-size: 14px; font-weight: 700; color: var(--grey-800); flex: 1; }
+.arv-insights-badge { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--purple-100); color: var(--purple-500); }
+
+/* Bölüm başlıkları */
+.arv-insights-section { border-bottom: 1px solid var(--grey-100); }
+.arv-insights-section:last-child { border-bottom: none; }
+.arv-insights-section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--grey-400); margin: 0; padding: 10px 20px 6px; }
+
 .arv-insights-list { display: flex; flex-direction: column; gap: 0; }
-.arv-insight-item { display: flex; align-items: flex-start; gap: 14px; padding: 14px 20px; border-bottom: 1px solid var(--grey-100); }
+.arv-insight-item { display: flex; align-items: flex-start; gap: 14px; padding: 12px 20px; border-bottom: 1px solid var(--grey-50); }
 .arv-insight-item:last-child { border-bottom: none; }
 .arv-insight-num { width: 24px; height: 24px; border-radius: 50%; background: var(--purple-100); color: var(--purple-500); font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
 .arv-insight-item p { margin: 0; font-size: 13.5px; color: var(--grey-700); line-height: 1.65; }
+
+/* Renkli ikon versiyonu (gerçek veri) */
+.arv-insight-colored { gap: 12px; }
+.arv-insight-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+.arv-insight-colored.bi-red .arv-insight-icon { background: var(--red-100); color: var(--red-500); }
+.arv-insight-colored.bi-green .arv-insight-icon { background: var(--green-100,#e8f5ee); color: var(--green-600); }
+.arv-insight-colored.bi-yellow .arv-insight-icon { background: var(--orange-100); color: var(--orange-500); }
+.arv-insight-colored.bi-blue .arv-insight-icon { background: var(--blue-100); color: var(--blue-500); }
+.arv-insight-colored.bi-purple .arv-insight-icon { background: var(--purple-100); color: var(--purple-500); }
+.arv-insight-colored.bi-grey .arv-insight-icon { background: var(--grey-100); color: var(--grey-500); }
+
+/* Haftalık aksiyonlar insights içinde */
+.arv-insights-actions { margin: 0 20px 14px; }
 
 /* ── Haftalık Rapor ── */
 .arv-weekly { background: #fff; border: 1px solid var(--grey-200); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 24px; }
