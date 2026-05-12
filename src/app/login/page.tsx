@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import '../onboarding/onboarding.css';
 import './login.css';
@@ -168,7 +169,11 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="login-invite">CoopNet’ten davet isteyin veya mevcut kooperatif hesabınıza bağlanın.</p>        </div>      </div>
+          <p className="login-invite">
+            <Link href="/invite">CoopNet’ten davet isteyin</Link> veya mevcut kooperatif hesabınıza bağlanın.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
