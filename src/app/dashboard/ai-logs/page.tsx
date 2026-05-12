@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './ai-logs.css';
-import { getAILogs, getAgentDecisions, getAnomalySummary, type AgentDecisionItem, type AnomalyItem } from '@/lib/api/client';
+import { getAILogs, getAgentDecisions, type AgentDecisionItem } from '@/lib/api/client';
 
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 function todayTr(): string { const n = new Date(); return `${n.getDate()} ${TR_MONTHS[n.getMonth()]} ${n.getFullYear()}`; }
@@ -43,40 +43,16 @@ const navItems = [
   { id: 'uretici-mesaj', label: 'Üretici Mesaj',  icon: 'phone',     path: '/dashboard/uretici-mesaj' },
 ];
 
-// Kategori → ikon
-function warningIcon(category: string): string {
-  const c = category.toLowerCase();
-  if (c === 'depo')      return 'warehouse';
-  if (c === 'israf')     return 'alert';
-  if (c === 'talep')     return 'info';
-  if (c === 'lojistik')  return 'info';
-  if (c === 'stk')       return 'bell';
-  return 'alert';
-}
-
 export default function AILogsPage() {
   const router = useRouter();
   const [activeNav, setActiveNav] = useState('ai-logs');
   const [aiActing, setAiActing] = useState<any[]>([]);
   const [aiActingLoading, setAiActingLoading] = useState(true);
-  const [warnings, setWarnings] = useState<AnomalyItem[]>([]);
-  const [warningsLoading, setWarningsLoading] = useState(true);
   const [decisions, setDecisions] = useState<AgentDecisionItem[]>([]);
   const [decisionsLoading, setDecisionsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'logs' | 'decisions'>('logs');
 
   useEffect(() => {
-    // Gerçek uyarılar — anomali API'sinden, sadece kritik/yüksek, max 8
-    getAnomalySummary()
-      .then(data => {
-        const critical = (data.anomalies as AnomalyItem[])
-          .filter(a => a.severity === 'kritik' || a.severity === 'yuksek')
-          .slice(0, 8);
-        setWarnings(critical);
-      })
-      .catch(console.error)
-      .finally(() => setWarningsLoading(false));
-
     // AI işlem logları
     getAILogs()
       .then(data => {
@@ -166,19 +142,15 @@ export default function AILogsPage() {
           <div className="header-coop-title">
             <span style={{ fontSize: 22 }}>🤖</span>
             <div>
-              <h2 className="header-coop-name">AI Logs & Erken Uyarı Sistemi</h2>
-              <p className="header-coop-sub">Yapay Zeka İşlem Kayıtları ve Risk Analizleri · {todayTr()}</p>
+              <h2 className="header-coop-name">AI Logs</h2>
+              <p className="header-coop-sub">Yapay Zeka İşlem Kayıtları ve Ajan Kararları · {todayTr()}</p>
             </div>
           </div>
           <div className="search-box">
             <Icon d={icons.search} size={15} />
             <input type="text" placeholder="Log, uyarı veya işlem ara…" />
           </div>
-          <div className="header-actions">
-            {warnings.length > 0 && (
-              <span className="header-warn-badge">{warnings.length} uyarı</span>
-            )}
-          </div>
+          <div className="header-actions" />
         </header>
 
         {/* Content */}
@@ -267,53 +239,7 @@ export default function AILogsPage() {
           {activeTab === 'logs' && (
           <div className="ai-logs-layout">
 
-            {/* 1. Uyarılar (Erken Uyarı Sistemi) — gerçek anomali verisi */}
-            <section className="ai-logs-panel">
-              <div className="panel-header warning-header">
-                <Icon d={icons.alert} size={18} />
-                <h3>Uyarılar (Erken Uyarı Sistemi)</h3>
-                {!warningsLoading && (
-                  <span className="panel-badge red">
-                    Aktif: {warnings.length} Risk
-                  </span>
-                )}
-              </div>
-
-              {warningsLoading && (
-                <div className="warnings-loading">
-                  <div className="warn-sk" /><div className="warn-sk" /><div className="warn-sk" />
-                </div>
-              )}
-
-              {!warningsLoading && warnings.length === 0 && (
-                <div className="warnings-empty">
-                  <span>✅</span>
-                  <p>Şu an aktif kritik/yüksek risk uyarısı yok.</p>
-                </div>
-              )}
-
-              {!warningsLoading && warnings.length > 0 && (
-                <div className="warnings-grid">
-                  {warnings.map(a => (
-                    <div key={a.id} className={`warning-card ${a.severity}`}>
-                      <div className="warning-card-top">
-                        <div className={`warning-icon warn-icon-${a.severity}`}>
-                          <Icon d={icons[warningIcon(a.category)] || icons.alert} size={20} />
-                        </div>
-                        <div className="warning-info">
-                          <strong>{a.title}</strong>
-                          <p>{a.description}</p>
-                        </div>
-                      </div>
-                      <span className="warning-source">{a.category} · {a.source}</span>
-                      <div className="warning-rec">💡 {a.recommendation}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* 2. AI Acting (Şeffaf İşlem Kayıtları) */}
+            {/* AI Acting (Şeffaf İşlem Kayıtları) */}
             <section className="ai-logs-panel">
               <div className="panel-header acting-header">
                 <Icon d={icons.brain} size={18} />
