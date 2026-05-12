@@ -689,7 +689,7 @@ export default function UreticiMesajPage() {
 
         {/* ── Test Paneli (overlay — sağ altta) ── */}
         {showTest && (
-          <div style={{ position: 'fixed', bottom: 24, right: 24, width: 400, zIndex: 200 }}>
+          <div style={{ position: 'fixed', bottom: 24, right: 24, width: 'min(400px, calc(100vw - 48px))', zIndex: 200 }}>
             <div className="test-panel">
               <div className="test-panel-header">
                 <div>

@@ -7,7 +7,6 @@ import {
   getDemandTrends,
   sendWasteOffer,
   createWasteTask,
-  testWhatsApp,
   type WasteRiskItem,
   type DemandTrendItem,
 } from '@/lib/api/client';
@@ -116,7 +115,6 @@ export default function TaleplerPage() {
   const [loadingMap,  setLoadingMap]  = useState<Record<string, boolean>>({});
   const [doneMap,     setDoneMap]     = useState<Record<string, DoneAction>>({});
   const [toast,       setToast]       = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-  const [testingWA,   setTestingWA]   = useState(false);
 
   // ── Load ──────────────────────────────────────────────────────────────────
   const loadData = useCallback(async () => {
@@ -261,23 +259,6 @@ export default function TaleplerPage() {
             </div>
           </div>
           <div className="header-actions">
-            <button
-              className="btn-wa-test"
-              disabled={testingWA}
-              onClick={async () => {
-                setTestingWA(true);
-                try {
-                  const r = await testWhatsApp();
-                  if (r.status === 'sent') showToast(`✅ WhatsApp gönderildi → ${r.to}`);
-                  else if (r.status === 'simulated') showToast('⚠️ Twilio henüz aktif değil (simülasyon)', 'error');
-                  else showToast(r.message || 'Hata', 'error');
-                } catch { showToast('Bağlantı hatası', 'error'); }
-                finally { setTestingWA(false); }
-              }}
-            >
-              {testingWA ? <span className="btn-spinner btn-spinner-dark" /> : '📱'}
-              {testingWA ? 'Gönderiliyor…' : 'WA Test'}
-            </button>
             <button className="btn-refresh-header" onClick={loadData}>
               <Icon d={ICONS.refresh} size={15} />
               Yenile

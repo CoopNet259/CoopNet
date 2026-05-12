@@ -418,7 +418,6 @@ export default function DashboardPage() {
                     <strong>Bereket Salça Atölyesi</strong>
                     <span>Salça Üretimi İçin Uygun</span>
                   </div>
-                  <button className="stk-widget-action" onClick={(e) => { e.stopPropagation(); alert('Bereket Salça Atölyesine mesaj gönderiliyor...'); }}>İletişime Geç</button>
                 </div>
               </div>
 
@@ -437,7 +436,6 @@ export default function DashboardPage() {
                     <strong>Tatlıcı Şirin Kooperatifi</strong>
                     <span>Reçel Üretimi İçin Uygun</span>
                   </div>
-                  <button className="stk-widget-action" onClick={(e) => { e.stopPropagation(); alert('Tatlıcı Şirin Kooperatifine mesaj gönderiliyor...'); }}>İletişime Geç</button>
                 </div>
               </div>
             </div>
