@@ -78,7 +78,7 @@ export default function LoginPage() {
 
           <div className="login-welcome">
             <p className="ob-eyebrow login-eyebrow">Kooperatif hesabınızla giriş yapın</p>
-            <h2 className="login-heading">CoopNet’inizi hızlıca açın</h2>
+            <h2 className="login-heading">{"CoopNet'inizi hizlica acin"}</h2>
 
           </div>
 
@@ -156,7 +156,7 @@ export default function LoginPage() {
               {loading ? (
                 <>
                   <span className="spinner" />
-                  Giriş yapılıyor…
+                  {'Giris yapiliyor...'}
                 </>
               ) : (
                 <>
@@ -171,23 +171,23 @@ export default function LoginPage() {
           </form>
 
           <div className="demo-hint">
-            <span className="demo-hint-label">🎯 Demo Giriş Bilgileri</span>
+            <span className="demo-hint-label">Demo Giris Bilgileri</span>
             <div className="demo-hint-row">
               <span>E-posta</span>
-              <button type="button" className="demo-fill-btn" onClick={() => setEmail(‘admin@uretenkadin.coop’)}>
-                admin@uretenkadin.coop
+              <button type="button" className="demo-fill-btn" onClick={() => { setEmail('admin@uretenkadin.coop'); }}>
+                {'admin@uretenkadin.coop'}
               </button>
             </div>
             <div className="demo-hint-row">
-              <span>Şifre</span>
-              <button type="button" className="demo-fill-btn" onClick={() => setPassword(‘kooperatif2026’)}>
-                kooperatif2026
+              <span>Sifre</span>
+              <button type="button" className="demo-fill-btn" onClick={() => { setPassword('kooperatif2026'); }}>
+                {'kooperatif2026'}
               </button>
             </div>
           </div>
 
           <p className="login-invite">
-            <Link href="/invite">CoopNet’ten davet isteyin</Link> veya mevcut kooperatif hesabınıza bağlanın.
+            <Link href="/invite">CoopNet'ten davet isteyin</Link> veya mevcut kooperatif hesabınıza bağlanın.
           </p>
         </div>
       </div>
