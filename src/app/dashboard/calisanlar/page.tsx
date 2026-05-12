@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './calisanlar.css';
 import { getEmployees, getOnDuty, type Employee, type OnDutyEntry } from '@/lib/api/client';
+import NotifBell from '../components/NotifBell';
 
 const DEPT_LABEL: Record<string, string> = {
   depo: 'Depo', lojistik: 'Lojistik', tarla: 'Tarla', muhasebe: 'Muhasebe', yonetim: 'Yönetim',
@@ -144,6 +145,7 @@ export default function CalisanlarPage() {
             </div>
           </div>
           <div className="header-actions">
+            <NotifBell />
             <button className="cal-btn" onClick={() => router.push('/dashboard/vardiye')}>
               <Icon d={icons.calendar} size={15} /> Vardiye Takvimi
             </button>

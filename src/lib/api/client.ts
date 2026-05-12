@@ -448,3 +448,21 @@ export const createShift = (body: {
 
 export const deleteShift = (shift_id: number) =>
   api<{ ok: boolean }>(`/api/shifts/${shift_id}`, { method: 'DELETE' });
+
+// ── Notifications ─────────────────────────────────────────────
+export interface Notification {
+  id: string;
+  icon: string;
+  text: string;
+  time: string;
+  severity: 'kritik' | 'yuksek' | 'orta';
+  category: string;
+}
+
+export interface NotificationsResponse {
+  notifications: Notification[];
+  unread_count: number;
+}
+
+export const getNotifications = () =>
+  api<NotificationsResponse>('/api/notifications');

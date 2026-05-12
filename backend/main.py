@@ -2,13 +2,13 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from routers import harvest, ai, dashboard, cron, producers, anomaly_router, whatsapp, approvals, waste_prevention, shifts
+from routers import harvest, ai, dashboard, cron, producers, anomaly_router, whatsapp, approvals, waste_prevention, shifts, notifications
 
 app = FastAPI(title="CoopNet API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:30003", "http://127.0.0.1:3000", "http://127.0.0.1:30003"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -24,6 +24,7 @@ app.include_router(whatsapp.router)
 app.include_router(approvals.router)
 app.include_router(waste_prevention.router)
 app.include_router(shifts.router)
+app.include_router(notifications.router)
 
 
 # ── Zamanlanmış Görevler ──────────────────────────────────────────────────────

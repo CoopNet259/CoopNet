@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './ai-logs.css';
 import { getAILogs, getAgentDecisions, type AgentDecisionItem } from '@/lib/api/client';
+import NotifBell from '../components/NotifBell';
 
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 function todayTr(): string { const n = new Date(); return `${n.getDate()} ${TR_MONTHS[n.getMonth()]} ${n.getFullYear()}`; }
@@ -148,7 +149,7 @@ export default function AILogsPage() {
               <p className="header-coop-sub">Yapay Zeka İşlem Kayıtları ve Ajan Kararları · {todayTr()}</p>
             </div>
           </div>
-          <div className="header-actions" />
+          <div className="header-actions"><NotifBell /></div>
         </header>
 
         {/* Content */}

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './ureticiler.css';
 import { getProducers } from '@/lib/api/client';
+import NotifBell from '../components/NotifBell';
 
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 function todayTr(): string { const n = new Date(); return `${n.getDate()} ${TR_MONTHS[n.getMonth()]} ${n.getFullYear()}`; }
@@ -68,7 +69,6 @@ const initialKardesUreticiler = [
 export default function UreticilerPage() {
   const router = useRouter();
   const [activeNav, setActiveNav] = useState('ureticiler');
-  const [showNotif, setShowNotif] = useState(false);
   const [talebeGoreUreticiler, setTalebeGoreUreticiler] = useState<any[]>(initialTalebeGoreUreticiler);
   const [genelUreticiler, setGenelUreticiler] = useState<any[]>(initialGenelUreticiler);
   const [kardesUreticiler, setKardesUreticiler] = useState<any[]>(initialKardesUreticiler);
@@ -163,11 +163,7 @@ export default function UreticilerPage() {
             </div>
           </div>
           <div className="header-actions">
-            <div style={{ position: 'relative' }}>
-              <button className="icon-btn" onClick={() => setShowNotif(!showNotif)} id="notif-btn">
-                <Icon d={icons.bell} size={18} />
-              </button>
-            </div>
+            <NotifBell />
           </div>
         </header>
 

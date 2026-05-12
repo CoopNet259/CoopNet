@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import './anomali.css';
 import { getAnomalySummary } from '@/lib/api/client';
+import NotifBell from '../components/NotifBell';
 
 const AUTO_REFRESH_MS = 60_000; // 60 saniyede bir otomatik yenile
 
@@ -227,6 +228,7 @@ export default function AnomaliPage() {
               <Icon d={icons.refresh} size={15} cls={refreshing ? 'spin-icon' : ''} />
               {refreshing ? 'Yenileniyor…' : 'Yenile'}
             </button>
+            <NotifBell />
           </div>
         </header>
 

@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import './ai-raporlar.css';
 import { getAIReports, postWeeklyInsight } from '@/lib/api/client';
+import NotifBell from '../components/NotifBell';
 
 const Icon = ({ d, size = 18, extra = '' }: { d: string | string[]; size?: number; extra?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={extra}>
@@ -232,6 +233,7 @@ export default function AIRaporlarPage() {
           <div className="header-actions" style={{ marginLeft: 'auto' }}>
             <div className="arap-stat-chip"><span>{loading ? '…' : reports.length}</span> rapor</div>
             <div className="arap-stat-chip"><span>{loading ? '…' : reports.reduce((s,r)=>s+r.maddeler.length,0)}</span> madde</div>
+            <NotifBell />
           </div>
         </header>
 

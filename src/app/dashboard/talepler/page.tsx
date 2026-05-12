@@ -11,6 +11,7 @@ import {
   type WasteRiskItem,
   type DemandTrendItem,
 } from '@/lib/api/client';
+import NotifBell from '../components/NotifBell';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -112,7 +113,6 @@ export default function TaleplerPage() {
   // UI state
   const [loading,     setLoading]     = useState(true);
   const [trendTab,    setTrendTab]    = useState<'up' | 'down'>('up');
-  const [showNotif,   setShowNotif]   = useState(false);
   const [loadingMap,  setLoadingMap]  = useState<Record<string, boolean>>({});
   const [doneMap,     setDoneMap]     = useState<Record<string, DoneAction>>({});
   const [toast,       setToast]       = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
@@ -283,32 +283,7 @@ export default function TaleplerPage() {
               <Icon d={ICONS.refresh} size={15} />
               Yenile
             </button>
-            <div style={{ position: 'relative' }}>
-              <button className="icon-btn" onClick={() => setShowNotif(!showNotif)}>
-                <Icon d={ICONS.bell} size={18} />
-                {riskItems.length > 0 && <span className="notif-dot" />}
-              </button>
-              {showNotif && (
-                <div className="notif-dropdown">
-                  <div className="notif-header">İsraf Bildirimleri</div>
-                  {riskItems.length === 0
-                    ? <div className="notif-item"><span>✅</span><div style={{flex:1}}><div className="notif-text">Şu an israf riski yok</div></div></div>
-                    : riskItems.slice(0,4).map(r => (
-                      <div key={r.id} className="notif-item">
-                        <span style={{fontSize:16}}>{r.emoji}</span>
-                        <div style={{flex:1}}>
-                          <div className="notif-text">{r.urun} — {r.days_left} gün kaldı</div>
-                          <div className="notif-time">{r.surplus_kg} kg fazla stok</div>
-                        </div>
-                      </div>
-                    ))
-                  }
-                  <div className="notif-footer">
-                    <button onClick={() => setShowNotif(false)}>Kapat</button>
-                  </div>
-                </div>
-              )}
-            </div>
+            <NotifBell />
           </div>
         </header>
 

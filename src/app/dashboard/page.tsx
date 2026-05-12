@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './dashboard.css';
 import { getDashboardSummary, patchTask, type DashboardSummary, type StockItem, type OrderItem, type TaskItem } from '@/lib/api/client';
+import NotifBell from './components/NotifBell';
 
 /* ── Icons ── */
 const Icon = ({ d, size = 18, extra = '' }: { d: string | string[]; size?: number; extra?: string }) => (
@@ -78,7 +79,6 @@ function parseTrDate(iso: string): string {
 export default function DashboardPage() {
   const router = useRouter();
   const [activeNav, setActiveNav] = useState('dashboard');
-  const [showNotif, setShowNotif] = useState(false);
   const [barsReady, setBarsReady] = useState(false);
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -211,33 +211,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="header-actions">
-            <div style={{ position: 'relative' }}>
-              <button className="icon-btn" onClick={() => setShowNotif(!showNotif)} id="notif-btn">
-                <Icon d={icons.bell} size={18} />
-                <span className="notif-dot" />
-              </button>
-              {showNotif && (
-                <div className="notif-dropdown">
-                  <div className="notif-header">Bildirimler</div>
-                  {[
-                    { icon: '⚠️', text: 'Domates stoku kritik seviyede', time: '5dk önce' },
-                    { icon: '📦', text: 'Migros siparişi onay bekliyor', time: '30dk önce' },
-                    { icon: '🤖', text: 'AI anomali raporu hazır',        time: '1s önce'  },
-                  ].map((n, i) => (
-                    <div key={i} className="notif-item">
-                      <span style={{ fontSize: 16 }}>{n.icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <div className="notif-text">{n.text}</div>
-                        <div className="notif-time">{n.time}</div>
-                      </div>
-                    </div>
-                  ))}
-                  <div className="notif-footer">
-                    <button>Tümünü gör</button>
-                  </div>
-                </div>
-              )}
-            </div>
+            <NotifBell />
           </div>
         </header>
 

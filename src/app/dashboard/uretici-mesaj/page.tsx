@@ -13,6 +13,7 @@ import {
   rejectRequest,
   PendingApproval,
 } from '@/lib/api/client';
+import NotifBell from '../components/NotifBell';
 
 // ── Tipler ──────────────────────────────────────────────────────────────
 interface IncomingMessage {
@@ -293,9 +294,7 @@ export default function UreticiMesajPage() {
               <Icon d={icons.flask} size={14} />
               Test Gönder
             </button>
-            <button className="icon-btn">
-              <Icon d={icons.bell} size={18} />
-            </button>
+            <NotifBell />
           </div>
         </header>
 

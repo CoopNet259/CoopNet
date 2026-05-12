@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import './depo.css';
 import { getAllStock, type StockItem } from '@/lib/api/client';
+import NotifBell from '../components/NotifBell';
 
 const TR_MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 function todayTr(): string { const n = new Date(); return `${n.getDate()} ${TR_MONTHS[n.getMonth()]} ${n.getFullYear()}`; }
@@ -96,7 +97,6 @@ function tierToUrgency(tier: string): UrgencyLevel {
 export default function DepoPage() {
   const router = useRouter();
   const [activeNav, setActiveNav] = useState('depo');
-  const [showNotif, setShowNotif] = useState(false);
   const [filtre, setFiltre] = useState<'hepsi'|'kritik'|'normal'>('hepsi');
   const [stokVerisi, setStokVerisi] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -189,31 +189,7 @@ export default function DepoPage() {
             </div>
           </div>
           <div className="header-actions">
-            <div style={{ position: 'relative' }}>
-              <button className="icon-btn" onClick={() => setShowNotif(!showNotif)} id="notif-btn">
-                <Icon d={icons.bell} size={18} />
-                <span className="notif-dot" />
-              </button>
-              {showNotif && (
-                <div className="notif-dropdown">
-                  <div className="notif-header">Depo Bildirimleri</div>
-                  {[
-                    { icon: '🔴', text: 'İncir stoğu kritik seviyede (%8)', time: '10dk önce' },
-                    { icon: '🟠', text: 'Kayısı stoğu düşük (%9)', time: '25dk önce' },
-                    { icon: '📦', text: 'Fatma Kaya stok sayımı tamamladı', time: '1s önce' },
-                  ].map((n, i) => (
-                    <div key={i} className="notif-item">
-                      <span style={{ fontSize: 16 }}>{n.icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <div className="notif-text">{n.text}</div>
-                        <div className="notif-time">{n.time}</div>
-                      </div>
-                    </div>
-                  ))}
-                  <div className="notif-footer"><button>Tümünü gör</button></div>
-                </div>
-              )}
-            </div>
+            <NotifBell />
             <button className="btn-primary-sm" onClick={() => alert('Sipariş formu — yakında aktif')}>
               <Icon d={icons.plus} size={14} /> Sipariş Ver
             </button>

@@ -6,6 +6,7 @@ import {
   getShiftSchedule, getOnDuty, getEmployees, getTasksWithAssignees, createShift, deleteShift,
   type ScheduleDay, type OnDutyEntry, type Employee, type TaskWithAssignee, type ShiftEntry,
 } from '@/lib/api/client';
+import NotifBell from '../components/NotifBell';
 
 const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
 function fmtDate(iso: string) {
@@ -255,6 +256,7 @@ export default function VardiyePage() {
             </div>
           </div>
           <div className="header-actions">
+            <NotifBell />
             <button className="vrd-btn-primary" onClick={() => setShowModal(true)}>
               <Icon d={icons.plus} size={15} /> Vardiye Ekle
             </button>
