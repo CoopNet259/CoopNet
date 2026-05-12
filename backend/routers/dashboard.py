@@ -1,5 +1,5 @@
 from __future__ import annotations
-from datetime import date
+from datetime import date, timedelta
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from database import get_supabase
@@ -27,9 +27,23 @@ async def dashboard_summary():
         "id, is_name, durum, oncelik"
     ).execute()
 
+    # ── Haftalık hasat (onaylanan teslimler) ────────────────────
+    week_ago = (date.today() - timedelta(days=7)).isoformat()
+    harvest_res = sb.table("pending_approvals").select(
+        "kabul_miktari, talep_miktari, olusturuldu, durum"
+    ).eq("durum", "onaylandi").gte("olusturuldu", week_ago).execute()
+
+    # ── Sipariş trendi (bu hafta vs geçen hafta sayısı) ─────────
+    two_weeks_ago = (date.today() - timedelta(days=14)).isoformat()
+    orders_trend_res = sb.table("requests").select(
+        "id, tarih"
+    ).gte("tarih", two_weeks_ago).execute()
+
     products = products_res.data or []
     requests = requests_res.data or []
     tasks = tasks_res.data or []
+    harvest_approved = harvest_res.data or []
+    orders_trend_all = orders_trend_res.data or []
 
     # ── Stok hesapla ─────────────────────────────────────────────
     stock_items = []
@@ -104,14 +118,39 @@ async def dashboard_summary():
         for t in tasks[:5]
     ]
 
+    # ── Haftalık hasat toplamı (kg) ──────────────────────────────
+    harvest_kg_week = 0.0
+    for h in harvest_approved:
+        val = h.get("kabul_miktari") or h.get("talep_miktari") or 0
+        try:
+            harvest_kg_week += float(str(val).split()[0])
+        except (ValueError, TypeError):
+            pass
+
+    # ── Sipariş trendi hesapla ───────────────────────────────────
+    this_week_orders = sum(
+        1 for r in orders_trend_all
+        if (r.get("tarih") or "") >= week_ago
+    )
+    last_week_orders = sum(
+        1 for r in orders_trend_all
+        if two_weeks_ago <= (r.get("tarih") or "") < week_ago
+    )
+    if last_week_orders > 0:
+        order_trend_pct = round(((this_week_orders - last_week_orders) / last_week_orders) * 100)
+    elif this_week_orders > 0:
+        order_trend_pct = 100
+    else:
+        order_trend_pct = 0
+
     return {
         "date": today,
         "kpis": {
             "open_orders": len(open_requests),
-            "order_trend_pct": 0,
+            "order_trend_pct": order_trend_pct,
             "critical_stock": critical_count,
             "open_tasks": len(open_tasks),
-            "harvest_kg_week": 0,
+            "harvest_kg_week": round(harvest_kg_week),
         },
         "stock": stock_items[:8],   # Ana sayfa widget'ı için ilk 8 (kritikler önce)
         "orders": formatted_orders,
