@@ -363,10 +363,12 @@ Kurallar:
 
 
 def _get_monday() -> str:
+    """Geçen haftanın pazartesisini döner — haftalık rapor tamamlanmış veriyi göstermeli."""
     today = date_type.today()
     days_since_monday = today.weekday()
-    monday = today - timedelta(days=days_since_monday)
-    return monday.isoformat()
+    this_monday = today - timedelta(days=days_since_monday)
+    last_monday = this_monday - timedelta(days=7)
+    return last_monday.isoformat()
 
 
 @router.post("/weekly-insight")

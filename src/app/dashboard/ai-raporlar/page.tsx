@@ -77,9 +77,11 @@ function bulletIcon(text: string): { d: string | string[]; cls: string } {
 function getMondayOf(isoDate: string): string {
   const d = new Date(isoDate + 'T12:00:00');
   const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  return d.toISOString().split('T')[0];
+  // Bu haftanın pazartesi → 7 gün geri = geçen haftanın pazartesi
+  const diffToThisMonday = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diffToThisMonday - 7);
+  // toISOString UTC farkından korumak için manuel format
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
 interface WeeklyInsight {
@@ -347,16 +349,21 @@ export default function AIRaporlarPage() {
                           {weeklyInsight
                             ? (() => {
                                 const [sy, sm, sd] = weeklyInsight.week_start.split('-');
-                                const [ey, em, ed] = weeklyInsight.week_end.split('-');
-                                return `${parseInt(sd)} – ${parseInt(ed)} ${TR_MONTH_NAMES[parseInt(em)]} ${ey}`;
+                                // week_end exclusive → son gün = week_end - 1
+                                const endD = new Date(weeklyInsight.week_end + 'T12:00:00');
+                                endD.setDate(endD.getDate() - 1);
+                                const endDay = endD.getDate();
+                                const endMon = endD.getMonth() + 1;
+                                const endYear = endD.getFullYear();
+                                return `${parseInt(sd)} – ${endDay} ${TR_MONTH_NAMES[endMon]} ${endYear}`;
                               })()
                             : 'Haftalık Özet'}
                         </h2>
                         {weeklyInsight && (() => {
-                          const nextDay = new Date(weeklyInsight.week_end);
-                          nextDay.setDate(nextDay.getDate() + 1);
-                          const label = nextDay.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
-                          return <span className="arv-valid-until">Geçerli: {label}'e kadar</span>;
+                          const endD = new Date(weeklyInsight.week_end + 'T12:00:00');
+                          endD.setDate(endD.getDate() - 1);
+                          const label = `${endD.getDate()} ${TR_MONTH_NAMES[endD.getMonth()+1]}`;
+                          return <span className="arv-valid-until">Hafta: {weeklyInsight.week_start.split('-')[2]} – {label}</span>;
                         })()}
                       </div>
                     </div>
