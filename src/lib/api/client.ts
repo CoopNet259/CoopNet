@@ -467,6 +467,29 @@ export interface NotificationsResponse {
 export const getNotifications = () =>
   api<NotificationsResponse>('/api/notifications');
 
+// ── Finansal Özet ─────────────────────────────────────────────
+export interface FinancialSummary {
+  date: string;
+  yesterday: {
+    ciro: string;
+    siparis_sayisi: number;
+    transfer_sayisi: number;
+    israf_kg: number;
+  };
+  weekly_cards: Array<{
+    id: number;
+    baslik: string;
+    deger: string;
+    trend: string;
+    yon: 'up' | 'down';
+    icon: string;
+  }>;
+  tasks: Array<{ id: number; is: string; durum: boolean }>;
+}
+
+export const getFinancialSummary = () =>
+  api<FinancialSummary>('/api/financial/summary');
+
 // ── AI Dashboard Brief ────────────────────────────────────────
 export interface DashboardBrief {
   date: string;
