@@ -476,3 +476,10 @@ export interface DashboardBrief {
 
 export const getDashboardBrief = () =>
   api<DashboardBrief>('/api/ai/dashboard-brief');
+
+// ── Task Assignment ───────────────────────────────────────────
+export const assignTask = (taskId: number, employeeId: number | null) =>
+  api<{ ok: boolean; assigned_name: string | null; assigned_avatar: string | null; assigned_rol: string | null }>(
+    `/api/shifts/tasks/${taskId}/assign`,
+    { method: 'PATCH', body: JSON.stringify({ employee_id: employeeId }) }
+  );

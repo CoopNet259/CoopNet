@@ -321,3 +321,43 @@
   .cal-grid { grid-template-columns:repeat(2,1fr); }
   .duty-strip { flex-direction:column; align-items:flex-start; }
 }
+
+/* ── Görev Atama Dropdown ───────────────────────────────────────── */
+.task-unassigned-btn {
+  background: none; border: 1.5px dashed #cbd5e1; border-radius: 8px;
+  color: #64748b; font-size: 12px; font-weight: 600; padding: 5px 12px;
+  cursor: pointer; transition: all .15s;
+}
+.task-unassigned-btn:hover { border-color: #6366f1; color: #6366f1; background: #f0f0ff; }
+
+.task-assignee-btn {
+  background: none; border: none; cursor: pointer; padding: 0;
+  display: flex; align-items: center; gap: 8px; text-align: left;
+  border-radius: 8px; transition: background .15s;
+}
+.task-assignee-btn:hover { background: #f1f5f9; }
+
+.assign-dropdown {
+  position: absolute; top: 0; left: 0; z-index: 50;
+  background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12); padding: 8px; min-width: 220px;
+}
+.assign-dropdown-header {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;
+  letter-spacing: .5px; padding: 4px 6px 8px; border-bottom: 1px solid #f1f5f9; margin-bottom: 6px;
+}
+.assign-option {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; background: none; border: none; border-radius: 8px;
+  padding: 8px 10px; cursor: pointer; font-size: 13px; text-align: left;
+  transition: background .12s;
+}
+.assign-option:hover { background: #f1f5f9; }
+.assign-option.active { background: #ede9fe; }
+.assign-option:disabled { opacity: .5; cursor: wait; }
+.assign-option-avatar { font-size: 18px; }
+.assign-option-name { font-weight: 600; color: #1e293b; flex: 1; }
+.assign-option-dept { font-size: 11px; color: #94a3b8; }
+.assign-option-remove { color: #ef4444 !important; font-weight: 600; }
+.assign-option-remove:hover { background: #fef2f2 !important; }

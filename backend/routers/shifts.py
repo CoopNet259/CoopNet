@@ -222,3 +222,19 @@ async def get_tasks_with_assignees():
         t["assigned_rol"]     = emp.get("rol")
         t.pop("employees", None)
     return {"tasks": tasks}
+
+
+# ── PATCH /api/shifts/tasks/{task_id}/assign ──────────────────────
+class AssignTaskBody(BaseModel):
+    employee_id: int | None  # None → atamayı kaldır
+
+@router.patch("/tasks/{task_id}/assign")
+async def assign_task(task_id: int, body: AssignTaskBody):
+    """Göreve çalışan ata (veya atamayı kaldır)."""
+    sb = get_supabase()
+    sb.table("tasks").update({"assigned_to": body.employee_id}).eq("id", task_id).execute()
+    if body.employee_id:
+        emp_res = sb.table("employees").select("ad, avatar_emoji, rol").eq("id", body.employee_id).single().execute()
+        emp = emp_res.data or {}
+        return {"ok": True, "assigned_name": emp.get("ad"), "assigned_avatar": emp.get("avatar_emoji"), "assigned_rol": emp.get("rol")}
+    return {"ok": True, "assigned_name": None, "assigned_avatar": None, "assigned_rol": None}

@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import './vardiye.css';
 import {
-  getShiftSchedule, getOnDuty, getEmployees, getTasksWithAssignees, createShift, deleteShift,
+  getShiftSchedule, getOnDuty, getEmployees, getTasksWithAssignees, createShift, deleteShift, assignTask,
   type ScheduleDay, type OnDutyEntry, type Employee, type TaskWithAssignee, type ShiftEntry,
 } from '@/lib/api/client';
 import NotifBell from '../components/NotifBell';
@@ -121,6 +121,23 @@ export default function VardiyePage() {
 
   // Seçili departman filtresi (takvim görünümü)
   const [filterDept, setFilterDept] = useState<string>('all');
+
+  // Görev atama
+  const [assigningTaskId, setAssigningTaskId] = useState<number | null>(null);
+  const [assigningLoading, setAssigningLoading] = useState(false);
+
+  async function handleAssign(taskId: number, empId: number | null) {
+    setAssigningLoading(true);
+    try {
+      const res = await assignTask(taskId, empId);
+      setTasks(prev => prev.map(t =>
+        t.id === taskId
+          ? { ...t, assigned_to: empId, assigned_name: res.assigned_name ?? undefined, assigned_avatar: res.assigned_avatar ?? undefined, assigned_rol: res.assigned_rol ?? undefined }
+          : t
+      ));
+    } catch (e) { console.error(e); }
+    finally { setAssigningLoading(false); setAssigningTaskId(null); }
+  }
 
   const loadSchedule = useCallback(async (week?: string) => {
     setLoadingSched(true);
@@ -475,17 +492,43 @@ export default function VardiyePage() {
                             {t.oncelik === 'yuksek' ? '🔴 Yüksek' : t.oncelik === 'orta' ? '🟡 Orta' : '🟢 Düşük'}
                           </span>
                         </td>
-                        <td>
-                          {t.assigned_name ? (
-                            <div className="task-assignee">
+                        <td style={{ position: 'relative' }}>
+                          {assigningTaskId === t.id ? (
+                            <div className="assign-dropdown">
+                              <div className="assign-dropdown-header">
+                                <span>Personel Seç</span>
+                                <button onClick={() => setAssigningTaskId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>✕</button>
+                              </div>
+                              {t.assigned_name && (
+                                <button className="assign-option assign-option-remove" onClick={() => handleAssign(t.id, null)} disabled={assigningLoading}>
+                                  ✕ Atamayı Kaldır
+                                </button>
+                              )}
+                              {employees.map(emp => (
+                                <button
+                                  key={emp.id}
+                                  className={`assign-option${t.assigned_to === emp.id ? ' active' : ''}`}
+                                  onClick={() => handleAssign(t.id, emp.id)}
+                                  disabled={assigningLoading}
+                                >
+                                  <span className="assign-option-avatar">{emp.avatar_emoji}</span>
+                                  <span className="assign-option-name">{emp.ad}</span>
+                                  <span className="assign-option-dept">{emp.departman}</span>
+                                </button>
+                              ))}
+                            </div>
+                          ) : t.assigned_name ? (
+                            <button className="task-assignee task-assignee-btn" onClick={() => setAssigningTaskId(t.id)} title="Değiştirmek için tıkla">
                               <span className="task-assignee-avatar">{t.assigned_avatar}</span>
                               <div>
                                 <span className="task-assignee-name">{t.assigned_name}</span>
                                 <span className="task-assignee-rol">{t.assigned_rol}</span>
                               </div>
-                            </div>
+                            </button>
                           ) : (
-                            <span className="task-unassigned">Atanmadı</span>
+                            <button className="task-unassigned task-unassigned-btn" onClick={() => setAssigningTaskId(t.id)}>
+                              + Ata
+                            </button>
                           )}
                         </td>
                         <td>
