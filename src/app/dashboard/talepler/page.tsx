@@ -502,7 +502,16 @@ export default function TaleplerPage() {
 
                           {/* Action buttons */}
                           <div className="stk-actions">
-                            {offerDone ? (
+                            {(level === 'critical' || level === 'urgent') ? (
+                              /* Critical/urgent: agent already sent automatically — show info badge */
+                              <div className="action-agent-auto">
+                                <span className="agent-auto-icon">🤖</span>
+                                <div className="agent-auto-text">
+                                  <span className="agent-auto-title">Ajan Otomatik Gönderdi</span>
+                                  <span className="agent-auto-sub">Kardeş üreticilere WhatsApp teklifi iletildi</span>
+                                </div>
+                              </div>
+                            ) : offerDone ? (
                               <div className="action-done">
                                 <Icon d={ICONS.check} size={14} /> Teklif Gönderildi
                               </div>
