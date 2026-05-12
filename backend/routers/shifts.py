@@ -126,46 +126,52 @@ async def get_schedule(week: str = Query(default=None)):
 async def on_duty(departman: str | None = Query(default=None)):
     """
     Şu an vardiyede olan çalışanlar.
-    Saat aralığına göre filtreler.
+    Aktif vardiye yoksa bugünün tüm vardiyelerini döner (mesai bitti gösterimi).
     """
-    sb   = get_supabase()
-    now  = datetime.now()
+    sb        = get_supabase()
+    now       = datetime.now()
     today_str = now.date().isoformat()
     now_time  = now.strftime("%H:%M")
 
-    q = (
-        sb.table("shifts")
-        .select("*, employees(id, ad, departman, rol, avatar_emoji, telefon)")
-        .eq("tarih", today_str)
-        .lte("baslangic", now_time)
-        .gte("bitis",     now_time)
-    )
-    if departman:
-        q = q.eq("departman", departman)
+    def _fetch(date_str: str, time_filter: bool):
+        q = (
+            sb.table("shifts")
+            .select("*, employees(id, ad, departman, rol, avatar_emoji, telefon)")
+            .eq("tarih", date_str)
+        )
+        if time_filter:
+            q = q.lte("baslangic", now_time).gte("bitis", now_time)
+        if departman:
+            q = q.eq("departman", departman)
+        return q.order("baslangic").execute().data or []
 
-    res = q.execute()
-    shifts = res.data or []
+    shifts = _fetch(today_str, time_filter=True)
+    active = True
+    if not shifts:
+        # Mesai bitti — bugünün tüm vardiyelerini göster
+        shifts = _fetch(today_str, time_filter=False)
+        active = False
 
-    result = []
-    for s in shifts:
+    def _fmt(s: dict) -> dict:
         emp = s.get("employees") or {}
-        result.append({
-            "shift_id":      s["id"],
-            "employee_id":   s["employee_id"],
-            "ad":            emp.get("ad", "?"),
-            "avatar":        emp.get("avatar_emoji", "👤"),
-            "rol":           emp.get("rol", ""),
-            "telefon":       emp.get("telefon"),
-            "departman":     s["departman"],
+        return {
+            "shift_id":        s["id"],
+            "employee_id":     s["employee_id"],
+            "ad":              emp.get("ad", "?"),
+            "avatar":          emp.get("avatar_emoji", "👤"),
+            "rol":             emp.get("rol", ""),
+            "telefon":         emp.get("telefon"),
+            "departman":       s["departman"],
             "departman_label": DEPT_LABEL.get(s["departman"], s["departman"]),
-            "dept_color":    DEPT_COLOR.get(s["departman"], "#64748b"),
-            "vardiye":       s["vardiye_turu"],
-            "vardiye_label": VARDIYE_LABEL.get(s["vardiye_turu"], s["vardiye_turu"]),
-            "baslangic":     s["baslangic"],
-            "bitis":         s["bitis"],
-        })
+            "dept_color":      DEPT_COLOR.get(s["departman"], "#64748b"),
+            "vardiye":         s["vardiye_turu"],
+            "vardiye_label":   VARDIYE_LABEL.get(s["vardiye_turu"], s["vardiye_turu"]),
+            "baslangic":       s["baslangic"],
+            "bitis":           s["bitis"],
+            "active":          active,
+        }
 
-    return {"date": today_str, "time": now_time, "on_duty": result}
+    return {"date": today_str, "time": now_time, "on_duty": [_fmt(s) for s in shifts]}
 
 
 # ── POST /api/shifts/ ─────────────────────────────────────────────

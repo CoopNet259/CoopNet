@@ -15,16 +15,13 @@ function fmtDate(iso: string) {
 function weekLabel(start: string, end: string) {
   return `${fmtDate(start)} – ${fmtDate(end)}`;
 }
-function prevMonday(iso: string) {
-  const d = new Date(iso + 'T00:00:00');
-  d.setDate(d.getDate() - 7);
-  return d.toISOString().slice(0, 10);
+function shiftDays(iso: string, days: number): string {
+  const d = new Date(iso + 'T12:00:00'); // öğlen — DST ve UTC kaymasını önler
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
-function nextMonday(iso: string) {
-  const d = new Date(iso + 'T00:00:00');
-  d.setDate(d.getDate() + 7);
-  return d.toISOString().slice(0, 10);
-}
+function prevMonday(iso: string) { return shiftDays(iso, -7); }
+function nextMonday(iso: string) { return shiftDays(iso, 7); }
 
 const DEPT_LABEL: Record<string, string> = {
   depo: 'Depo', lojistik: 'Lojistik', tarla: 'Tarla', muhasebe: 'Muhasebe', yonetim: 'Yönetim',
@@ -267,19 +264,22 @@ export default function VardiyePage() {
         <div className="content">
 
           {/* ── Şu An Görevde şeridi ── */}
+          {(() => {
+            const isActive = onDuty.length > 0 && (onDuty[0] as any).active !== false;
+            return (
           <div className="duty-strip">
             <div className="duty-strip-title">
-              <span className="duty-dot" />
-              <span>Şu An Görevde</span>
+              <span className={`duty-dot${!isActive ? ' duty-dot-off' : ''}`} />
+              <span>{isActive ? 'Şu An Görevde' : 'Bugünün Vardiyesi (Mesai Bitti)'}</span>
             </div>
             {loadingDuty ? (
               <div className="duty-loading">Yükleniyor…</div>
             ) : onDuty.length === 0 ? (
-              <div className="duty-empty">Şu an aktif vardiyede kimse yok</div>
+              <div className="duty-empty">Bugün için vardiye kaydı yok</div>
             ) : (
               <div className="duty-chips">
                 {onDuty.map(e => (
-                  <div key={e.shift_id} className="duty-chip" style={{ '--dept-color': e.dept_color } as React.CSSProperties}>
+                  <div key={e.shift_id} className={`duty-chip${!isActive ? ' duty-chip-off' : ''}`} style={{ '--dept-color': e.dept_color } as React.CSSProperties}>
                     <span className="duty-avatar">{e.avatar}</span>
                     <div className="duty-chip-info">
                       <span className="duty-name">{e.ad}</span>
@@ -291,6 +291,8 @@ export default function VardiyePage() {
               </div>
             )}
           </div>
+            );
+          })()}
 
           {/* ── Tab Bar ── */}
           <div className="vrd-tabs">
