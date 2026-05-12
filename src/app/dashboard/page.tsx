@@ -210,11 +210,6 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="search-box">
-            <Icon d={icons.search} size={15} />
-            <input type="text" placeholder="Ürün, üretici, talep ara…" />
-          </div>
-
           <div className="header-actions">
             <div style={{ position: 'relative' }}>
               <button className="icon-btn" onClick={() => setShowNotif(!showNotif)} id="notif-btn">

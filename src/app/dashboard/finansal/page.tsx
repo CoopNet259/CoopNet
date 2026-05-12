@@ -155,10 +155,6 @@ export default function FinansalRaporlarPage() {
               <p className="header-coop-sub">Günlük İş Akışı, Performans Özeti ve Yapay Zeka Öngörüleri</p>
             </div>
           </div>
-          <div className="search-box">
-            <Icon d={icons.search} size={15} />
-            <input type="text" placeholder="Rapor, işlem veya fatura ara…" />
-          </div>
           <div className="header-actions">
             <div style={{ position: 'relative' }}>
               <button className="icon-btn" onClick={() => setShowNotif(!showNotif)} id="notif-btn">

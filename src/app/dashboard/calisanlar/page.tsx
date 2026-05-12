@@ -61,7 +61,6 @@ export default function CalisanlarPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [onDuty, setOnDuty] = useState<OnDutyEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
   const [filterDept, setFilterDept] = useState('all');
 
   useEffect(() => {
@@ -79,11 +78,7 @@ export default function CalisanlarPage() {
     router.push(item.path);
   };
 
-  const filtered = employees.filter(e => {
-    const matchDept   = filterDept === 'all' || e.departman === filterDept;
-    const matchSearch = !search || e.ad.toLowerCase().includes(search.toLowerCase()) || e.rol.toLowerCase().includes(search.toLowerCase());
-    return matchDept && matchSearch;
-  });
+  const filtered = employees.filter(e => filterDept === 'all' || e.departman === filterDept);
 
   // Departman bazında grupla
   const byDept = ALL_DEPTS.reduce<Record<string, Employee[]>>((acc, d) => {
@@ -147,11 +142,6 @@ export default function CalisanlarPage() {
               <h2 className="header-coop-name">Çalışanlar</h2>
               <p className="header-coop-sub">Kooperatif personel listesi ve vardiye durumu</p>
             </div>
-          </div>
-          <div className="search-box">
-            <Icon d={icons.search} size={15} />
-            <input type="text" placeholder="İsim veya rol ara…"
-              value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <div className="header-actions">
             <button className="cal-btn" onClick={() => router.push('/dashboard/vardiye')}>

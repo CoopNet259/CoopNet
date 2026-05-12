@@ -162,10 +162,6 @@ export default function UreticilerPage() {
               <p className="header-coop-sub">Talep Karşılama ve Kardeş Üretici Ağı · {todayTr()}</p>
             </div>
           </div>
-          <div className="search-box">
-            <Icon d={icons.search} size={15} />
-            <input type="text" placeholder="Üretici veya ürün ara…" />
-          </div>
           <div className="header-actions">
             <div style={{ position: 'relative' }}>
               <button className="icon-btn" onClick={() => setShowNotif(!showNotif)} id="notif-btn">

@@ -261,10 +261,6 @@ export default function TaleplerPage() {
               <p className="header-coop-sub">Talep Trendleri · STK İsraf Önleme · {todayTr()}</p>
             </div>
           </div>
-          <div className="search-box">
-            <Icon d={ICONS.search} size={15} />
-            <input type="text" placeholder="Ürün veya kardeş üretici ara…" />
-          </div>
           <div className="header-actions">
             <button
               className="btn-wa-test"

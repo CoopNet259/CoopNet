@@ -148,10 +148,6 @@ export default function AILogsPage() {
               <p className="header-coop-sub">Yapay Zeka İşlem Kayıtları ve Ajan Kararları · {todayTr()}</p>
             </div>
           </div>
-          <div className="search-box">
-            <Icon d={icons.search} size={15} />
-            <input type="text" placeholder="Log, uyarı veya işlem ara…" />
-          </div>
           <div className="header-actions" />
         </header>
 

@@ -210,10 +210,6 @@ export default function AnomaliPage() {
               </p>
             </div>
           </div>
-          <div className="search-box">
-            <Icon d={icons.search} size={15} />
-            <input type="text" placeholder="Anomali, ürün veya kategori ara…" />
-          </div>
           <div className="header-actions">
             {/* Auto-refresh countdown */}
             <div className="refresh-countdown" title="Otomatik yenileme">

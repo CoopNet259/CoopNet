@@ -188,10 +188,6 @@ export default function DepoPage() {
               <p className="header-coop-sub">Üreten Kadınlar Kooperatif · {todayTr()}</p>
             </div>
           </div>
-          <div className="search-box">
-            <Icon d={icons.search} size={15} />
-            <input type="text" placeholder="Ürün veya çalışan ara…" />
-          </div>
           <div className="header-actions">
             <div style={{ position: 'relative' }}>
               <button className="icon-btn" onClick={() => setShowNotif(!showNotif)} id="notif-btn">
