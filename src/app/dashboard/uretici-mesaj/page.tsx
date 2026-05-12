@@ -76,6 +76,7 @@ const navItems = [
   { id: 'anomali',        label: 'Anomali',           icon: 'alert',     path: '/dashboard/anomali' },
   { id: 'ai-raporlar',   label: 'AI Raporları',      icon: 'brain',     path: '/dashboard/ai-raporlar' },
   { id: 'ai-logs',        label: 'AI Logs',           icon: 'log',       path: '/dashboard/ai-logs' },
+  { id: 'vardiye',      label: 'Vardiye',           icon: 'shift',     path: '/dashboard/vardiye' },
   { id: 'uretici-mesaj', label: 'Üretici Mesaj',     icon: 'phone',     path: '/dashboard/uretici-mesaj' },
 ];
 
