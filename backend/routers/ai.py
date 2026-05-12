@@ -264,8 +264,7 @@ async def ai_logs(
             "why": log.get("detay_neden") or log.get("mesaj", ""),
             "ctx": kategori_ctx(log.get("kategori", "")),
             "status": "success",
-            "confidence": 92,
-            "impact": log.get("detay_etki") or "iş akışına dahil edildi",
+            "impact": log.get("detay_etki") or "",
         }
         for log in all_logs
         if log.get("tip") in ("Rapor", "Otomasyon", "Aksiyon")

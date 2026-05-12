@@ -65,8 +65,8 @@ export default function AILogsPage() {
             kategori: item.ctx?.join(' · ') || 'Genel',
             detay_ne: item.title,
             detay_neden: item.why,
-            detay_veri: `Güven skoru: %${item.confidence}. ${item.impact}`,
-            detay_etki: item.impact,
+            detay_veri: item.ctx?.join(' · ') || item.kategori || '—',
+            detay_etki: item.impact || '—',
           })));
         }
       })
