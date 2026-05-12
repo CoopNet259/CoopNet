@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import './ai-raporlar.css';
 import { getAIReports, postWeeklyInsight } from '@/lib/api/client';
@@ -114,6 +114,8 @@ export default function AIRaporlarPage() {
   const [calMonth, setCalMonth]       = useState(5);
   const [weeklyInsight, setWeeklyInsight] = useState<WeeklyInsight | null>(null);
   const [weeklyLoading, setWeeklyLoading] = useState(false);
+  // Hafta başlangıcı → insight önbelleği (aynı haftaya tekrar AI çağrısı yapılmaz)
+  const weeklyCache = useRef<Map<string, WeeklyInsight>>(new Map());
 
   useEffect(() => {
     getAIReports()
@@ -142,11 +144,25 @@ export default function AIRaporlarPage() {
   useEffect(() => {
     if (!selectedDate) return;
     const monday = getMondayOf(selectedDate);
+
+    // Önbellekte varsa direkt göster
+    if (weeklyCache.current.has(monday)) {
+      setWeeklyInsight(weeklyCache.current.get(monday)!);
+      return;
+    }
+
     setWeeklyInsight(null);
     setWeeklyLoading(true);
     postWeeklyInsight(monday)
-      .then(data => setWeeklyInsight(data as WeeklyInsight))
-      .catch(() => setWeeklyInsight(null))
+      .then(data => {
+        const insight = data as WeeklyInsight;
+        weeklyCache.current.set(monday, insight);
+        setWeeklyInsight(insight);
+      })
+      .catch(() => {
+        // Başarısız olsa da null bırakma — sonraki render'da tekrar denenebilir
+        setWeeklyInsight(null);
+      })
       .finally(() => setWeeklyLoading(false));
   }, [selectedDate]);
 
@@ -325,9 +341,19 @@ export default function AIRaporlarPage() {
                         <span className="arv-badge arv-badge-green">Haftalık Rapor</span>
                         <h2 className="arv-title">
                           {weeklyInsight
-                            ? `${weeklyInsight.week_start.slice(5).replace('-','/')} – ${weeklyInsight.week_end.slice(5).replace('-','/')} Mayıs`
+                            ? (() => {
+                                const [sy, sm, sd] = weeklyInsight.week_start.split('-');
+                                const [ey, em, ed] = weeklyInsight.week_end.split('-');
+                                return `${parseInt(sd)} – ${parseInt(ed)} ${TR_MONTH_NAMES[parseInt(em)]} ${ey}`;
+                              })()
                             : 'Haftalık Özet'}
                         </h2>
+                        {weeklyInsight && (() => {
+                          const nextDay = new Date(weeklyInsight.week_end);
+                          nextDay.setDate(nextDay.getDate() + 1);
+                          const label = nextDay.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
+                          return <span className="arv-valid-until">Geçerli: {label}'e kadar</span>;
+                        })()}
                       </div>
                     </div>
 
@@ -346,12 +372,29 @@ export default function AIRaporlarPage() {
                             <p>Haftalık Puan</p>
                           </div>
                           <div className="arv-wstat-grid">
-                            <div className="arv-wstat"><span>{weeklyInsight.stats.total_orders}</span><p>Sipariş</p></div>
-                            <div className="arv-wstat"><span>{weeklyInsight.stats.delivered_orders}</span><p>Teslim</p></div>
-                            <div className="arv-wstat"><span>%{weeklyInsight.stats.fulfillment_rate}</span><p>Karşılama</p></div>
-                            <div className="arv-wstat arv-wstat-warn"><span>{weeklyInsight.stats.critical_items?.length ?? 0}</span><p>Kritik</p></div>
+                            <div className="arv-wstat"><span>{(weeklyInsight.stats as any).total_orders}</span><p>Sipariş</p></div>
+                            <div className="arv-wstat"><span>{(weeklyInsight.stats as any).delivered_orders}</span><p>Teslim</p></div>
+                            <div className="arv-wstat"><span>%{(weeklyInsight.stats as any).fulfillment_rate}</span><p>Karşılama</p></div>
+                            <div className="arv-wstat arv-wstat-warn"><span>{(weeklyInsight.stats as any).critical_items?.length ?? 0}</span><p>Kritik Stok</p></div>
                           </div>
                         </div>
+
+                        {/* En çok talep gören ürünler */}
+                        {((weeklyInsight.stats as any).top_products?.length > 0) && (
+                          <div className="arv-top-products">
+                            <p className="arv-tp-title">📦 Bu Hafta En Çok Sipariş Edilen</p>
+                            <div className="arv-tp-list">
+                              {(weeklyInsight.stats as any).top_products.map((p: any, i: number) => (
+                                <div key={i} className="arv-tp-item">
+                                  <span className="arv-tp-rank">#{i+1}</span>
+                                  <span className="arv-tp-name">{p.name}</span>
+                                  <span className="arv-tp-kg">{p.kg} kg</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         {weeklyInsight.insight && <p className="arv-weekly-insight">{weeklyInsight.insight}</p>}
                         {weeklyInsight.highlights?.length > 0 && (
                           <div className="arv-weekly-highlights">
@@ -379,8 +422,23 @@ export default function AIRaporlarPage() {
                     {!weeklyLoading && !weeklyInsight && (
                       <div className="arv-weekly-empty-state">
                         <Icon d={icons.calendar} size={32} extra="arv-empty-icon" />
-                        <p>Backend bağlantısı kurulamadı.</p>
-                        <span>Haftalık analiz için backend servisinin çalışır olması gerekir.</span>
+                        <p>Haftalık rapor yüklenemedi.</p>
+                        <span>Backend bağlantısını kontrol edin.</span>
+                        <button
+                          className="arv-retry-btn"
+                          onClick={() => {
+                            if (!selectedDate) return;
+                            const monday = getMondayOf(selectedDate);
+                            weeklyCache.current.delete(monday); // önbelleği temizle
+                            setWeeklyLoading(true);
+                            postWeeklyInsight(monday)
+                              .then(d => { weeklyCache.current.set(monday, d as WeeklyInsight); setWeeklyInsight(d as WeeklyInsight); })
+                              .catch(() => setWeeklyInsight(null))
+                              .finally(() => setWeeklyLoading(false));
+                          }}
+                        >
+                          Tekrar Dene
+                        </button>
                       </div>
                     )}
                   </div>

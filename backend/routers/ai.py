@@ -318,34 +318,76 @@ async def weekly_insight(req: WeeklyInsightRequest):
     week_end = week_end_dt.isoformat()
 
     sb = get_supabase()
-    try:
-        # requests tablosu: musteri, urun, miktar, saat, durum
-        orders_res = sb.table("requests").select("durum, miktar, urun").execute()
-        orders = orders_res.data or []
-        total_orders = len(orders)
-        delivered = sum(1 for o in orders if o.get("durum") == "teslim edildi")
-        delayed = sum(1 for o in orders if o.get("durum") in ("gecikti", "gecikmiş"))
-        fulfillment_rate = round((delivered / total_orders) * 100) if total_orders > 0 else 0
 
-        # products tablosu: ad, mevcut_kg, kapasite_kg
-        products_res = sb.table("products").select("ad, mevcut_kg, kapasite_kg").execute()
+    # ── Gerçek haftalık veri — tarih filtreli ──────────────────
+    try:
+        orders_res = (
+            sb.table("requests")
+            .select("durum, miktar, urun, musteri, tarih")
+            .gte("tarih", week_start)
+            .lt("tarih", week_end)
+            .execute()
+        )
+        orders = orders_res.data or []
+    except Exception:
+        orders = []
+
+    total_orders = len(orders)
+    delivered = sum(1 for o in orders if o.get("durum") in ("teslim edildi", "tamamlandi"))
+    delayed   = sum(1 for o in orders if o.get("durum") in ("gecikti", "gecikmiş"))
+    fulfillment_rate = round((delivered / total_orders) * 100) if total_orders > 0 else 0
+
+    def _parse_kg(val) -> float:
+        try: return float(str(val).split()[0])
+        except: return 0.0
+
+    total_kg = sum(_parse_kg(o.get("miktar")) for o in orders)
+
+    # Ürün bazında haftalık hacim
+    from collections import defaultdict
+    urun_totals: dict[str, float] = defaultdict(float)
+    for o in orders:
+        u = (o.get("urun") or "").strip()
+        if u:
+            urun_totals[u] += _parse_kg(o.get("miktar"))
+    top_products = sorted(urun_totals.items(), key=lambda x: -x[1])[:3]
+
+    # Kritik stok
+    try:
+        products_res = sb.table("products").select("ad, emoji, mevcut_kg, kapasite_kg").execute()
         critical_items = []
         for p in (products_res.data or []):
-            current = p.get("mevcut_kg") or 0
+            current  = p.get("mevcut_kg") or 0
             capacity = p.get("kapasite_kg") or 1
             if current <= capacity * 0.25:
                 critical_items.append({"name": p.get("ad", ""), "current": current, "unit": "kg"})
+    except Exception:
+        critical_items = []
 
-        context_text = f"""Hafta: {week_start} – {week_end}
+    # ── Temel istatistik yanıtı (AI başarısız olsa bile döner) ──
+    base_stats = {
+        "total_orders":     total_orders,
+        "delivered_orders": delivered,
+        "delayed_orders":   delayed,
+        "fulfillment_rate": fulfillment_rate,
+        "total_kg":         round(total_kg, 1),
+        "top_products":     [{"name": n, "kg": round(kg, 1)} for n, kg in top_products],
+        "critical_items":   critical_items,
+    }
 
-Sipariş özeti:
-- Toplam: {total_orders}
+    context_text = f"""Hafta: {week_start} – {week_end}
+
+Sipariş özeti ({total_orders} sipariş, {round(total_kg)} kg toplam):
 - Teslim edildi: {delivered} (%{fulfillment_rate} karşılama)
 - Gecikmiş: {delayed}
+- En çok talep gören ürünler: {', '.join(f"{n} ({round(kg)} kg)" for n, kg in top_products) or "veri yok"}
 
-Kritik stok durumu ({len(critical_items)} ürün):
-{chr(10).join(f"- {i['name']}: {i['current']} {i['unit']} (kritik eşiğin altında)" for i in critical_items) or "- Kritik stok yok"}"""
+Kritik stok ({len(critical_items)} ürün):
+{chr(10).join(f"- {i['name']}: {i['current']} kg" for i in critical_items) or "- Kritik stok yok"}"""
 
+    # ── AI kısmı — başarısız olursa istatistikleri yine de döndür ──
+    ai_output: dict = {}
+    try:
         model = get_model(system_instruction=WEEKLY_INSIGHT_SYSTEM)
         result = await asyncio.to_thread(
             model.generate_content,
@@ -353,30 +395,38 @@ Kritik stok durumu ({len(critical_items)} ürün):
             generation_config={"response_mime_type": "application/json"},
         )
         ai_output = json.loads(result.text)
-
-        response = {
-            "week_start": week_start,
-            "week_end": week_end,
-            "stats": {
-                "total_orders": total_orders,
-                "delivered_orders": delivered,
-                "delayed_orders": delayed,
-                "fulfillment_rate": fulfillment_rate,
-                "demand_trend_pct": 0,
-                "critical_items": critical_items,
-            },
-            "insight": ai_output.get("insight", ""),
-            "highlights": ai_output.get("highlights", []),
-            "recommended_actions": ai_output.get("recommended_actions", []),
-            "week_score": ai_output.get("week_score"),
+    except Exception:
+        # AI yoksa istatistik tabanlı otomatik özet üret
+        ai_output = {
+            "insight": (
+                f"{week_start} – {week_end} haftasında {total_orders} sipariş işlendi, "
+                f"{round(total_kg)} kg ürün hareketi gerçekleşti. "
+                f"Karşılama oranı %{fulfillment_rate}."
+            ),
+            "highlights": [
+                f"Toplam {total_orders} sipariş, {round(total_kg)} kg",
+                f"%{fulfillment_rate} karşılama oranı",
+                f"{len(critical_items)} kritik stok kalemi" if critical_items else "Kritik stok sorunu yok",
+            ],
+            "recommended_actions": (
+                [{"tone": "danger", "title": f"{critical_items[0]['name']} kritik", "meta": "Acil tedarik planlanmalı"}]
+                if critical_items else
+                [{"tone": "good", "title": "Stok seviyeleri normal", "meta": "Rutin takip yeterli"}]
+            ),
+            "week_score": min(100, max(0, fulfillment_rate - delayed * 5)),
         }
-        log_ai("weekly_insight", f"weekly_insight_{week_start}", response)
-        return response
 
-    except Exception as exc:
-        msg = str(exc)
-        is_rl = "429" in msg or "quota" in msg.lower()
-        raise HTTPException(status_code=429 if is_rl else 500, detail="AI şu an yoğun, lütfen birkaç saniye bekleyip tekrar deneyin." if is_rl else "Haftalık özet oluşturulamadı.")
+    response = {
+        "week_start": week_start,
+        "week_end":   week_end,
+        "stats":      base_stats,
+        "insight":    ai_output.get("insight", ""),
+        "highlights": ai_output.get("highlights", []),
+        "recommended_actions": ai_output.get("recommended_actions", []),
+        "week_score": ai_output.get("week_score"),
+    }
+    log_ai("weekly_insight", f"weekly_insight_{week_start}", response)
+    return response
 
 
 # ── GET /api/ai/reports ───────────────────────────────────────

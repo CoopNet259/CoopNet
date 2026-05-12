@@ -159,6 +159,20 @@
 .arv-weekly-empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 32px 20px; text-align: center; }
 .arv-weekly-empty-state p { margin: 0; font-size: 13.5px; font-weight: 600; color: var(--grey-500); }
 .arv-weekly-empty-state span { font-size: 12px; color: var(--grey-400); line-height: 1.5; }
+.arv-retry-btn { margin-top: 8px; padding: 8px 20px; background: var(--green-600); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+.arv-retry-btn:hover { background: var(--green-700); }
+
+/* Geçerlilik etiketi */
+.arv-valid-until { display: block; font-size: 11px; color: var(--green-600); font-weight: 500; margin-top: 3px; }
+
+/* En çok sipariş edilen ürünler */
+.arv-top-products { padding: 14px 20px; border-bottom: 1px solid var(--grey-100); }
+.arv-tp-title { font-size: 11.5px; font-weight: 700; color: var(--grey-500); text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 10px; }
+.arv-tp-list { display: flex; flex-direction: column; gap: 6px; }
+.arv-tp-item { display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: var(--grey-50); border-radius: var(--radius-sm); }
+.arv-tp-rank { font-size: 11px; font-weight: 800; color: var(--green-600); min-width: 20px; }
+.arv-tp-name { flex: 1; font-size: 13px; font-weight: 600; color: var(--grey-700); }
+.arv-tp-kg { font-size: 12px; font-weight: 700; color: var(--grey-500); }
 
 .arv-weekly-stats { display: flex; gap: 0; padding: 20px; border-bottom: 1px solid var(--grey-100); align-items: center; }
 .arv-wscore { display: flex; flex-direction: column; align-items: center; gap: 6px; padding-right: 24px; border-right: 1px solid var(--grey-100); margin-right: 24px; min-width: 80px; }
