@@ -54,7 +54,7 @@ async def test_whatsapp():
     }
 
 # Kaç günden az raf ömrü kalırsa devreye girir
-EXPIRY_DAYS_THRESHOLD = 3
+EXPIRY_DAYS_THRESHOLD = 21
 
 # Günlük tüketimin kaç katı olursa "israf riski" sayılır
 SURPLUS_MULTIPLIER = 1.5
