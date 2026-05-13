@@ -45,6 +45,7 @@ export default function LoginPage() {
     // Simulate auth — replace with real auth later
     await new Promise((r) => setTimeout(r, 900));
     if (email === 'admin@uretenkadin.coop' && password === 'kooperatif2026') {
+      localStorage.setItem('coopnet_auth', 'manager');
       router.push('/dashboard');
     } else {
       setError('E-posta veya şifre hatalı. Lütfen tekrar deneyin.');
@@ -77,7 +78,11 @@ export default function LoginPage() {
 
           <div className="login-welcome">
             <p className="ob-eyebrow login-eyebrow">Kooperatif hesabınızla giriş yapın</p>
+<<<<<<< HEAD
             <h2 class="login-title">CoopNet hesabınızı hızlıca açın</h2>
+=======
+            <h2 className="login-heading">{"CoopNet'inizi hizlica acin"}</h2>
+>>>>>>> d5461e8fa84363311f5b4ec81c6a2848401db055
 
           </div>
 
@@ -155,7 +160,7 @@ export default function LoginPage() {
               {loading ? (
                 <>
                   <span className="spinner" />
-                  Giriş yapılıyor…
+                  {'Giris yapiliyor...'}
                 </>
               ) : (
                 <>
@@ -169,8 +174,24 @@ export default function LoginPage() {
             </button>
           </form>
 
+          <div className="demo-hint">
+            <span className="demo-hint-label">Demo Giris Bilgileri</span>
+            <div className="demo-hint-row">
+              <span>E-posta</span>
+              <button type="button" className="demo-fill-btn" onClick={() => { setEmail('admin@uretenkadin.coop'); }}>
+                {'admin@uretenkadin.coop'}
+              </button>
+            </div>
+            <div className="demo-hint-row">
+              <span>Sifre</span>
+              <button type="button" className="demo-fill-btn" onClick={() => { setPassword('kooperatif2026'); }}>
+                {'kooperatif2026'}
+              </button>
+            </div>
+          </div>
+
           <p className="login-invite">
-            <Link href="/invite">CoopNet’ten davet isteyin</Link> veya mevcut kooperatif hesabınıza bağlanın.
+            <Link href="/invite">CoopNet'ten davet isteyin</Link> veya mevcut kooperatif hesabınıza bağlanın.
           </p>
         </div>
       </div>

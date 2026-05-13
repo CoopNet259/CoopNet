@@ -124,9 +124,11 @@ export default function VardiyePage() {
 
   // Görev atama
   const [assigningTaskId, setAssigningTaskId] = useState<number | null>(null);
+  const [assigningLoading, setAssigningLoading] = useState(false);
 
   async function handleAssign(taskId: number, empId: number | null) {
     setAssigningTaskId(taskId);
+    setAssigningLoading(true);
     try {
       const res = await assignTask(taskId, empId);
       setTasks(prev => prev.map(t =>
@@ -135,7 +137,7 @@ export default function VardiyePage() {
           : t
       ));
     } catch (e) { console.error(e); }
-    finally { setAssigningTaskId(null); }
+    finally { setAssigningTaskId(null); setAssigningLoading(false); }
   }
 
   const loadSchedule = useCallback(async (week?: string) => {
