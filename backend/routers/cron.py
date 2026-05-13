@@ -564,3 +564,41 @@ async def weekly_briefing(request: Request):
 
     log_ai("weekly_briefing", "cron:weekly_briefing", {"week_start": insight.week_start, "week_end": insight.week_end})
     return {"baslik": baslik, "insight": insight.model_dump()}
+
+
+# ── GET /api/cron/reset-expiry-dates (Her Pazartesi) ─────────
+# Ürünlerin son kullanım tarihlerini gerçekçi raf ömürlerine göre bugünden itibaren resetler
+
+EXPIRY_OFFSETS = {
+    4:  4,   # İncir        — 4 gün
+    1:  6,   # Domates      — 6 gün
+    3:  6,   # Kayısı       — 6 gün
+    9:  9,   # Üzüm         — 9 gün
+    5:  9,   # Salatalık    — 9 gün
+    2:  12,  # Biber        — 12 gün
+    6:  14,  # Patlıcan     — 14 gün
+    8:  18,  # Havuç        — 18 gün
+    10: 21,  # Mısır        — 21 gün
+    7:  25,  # Soğan        — 25 gün
+}
+
+@router.get("/reset-expiry-dates")
+async def reset_expiry_dates(request: Request):
+    """
+    Her Pazartesi çalışır.
+    Ürünlerin son_kullanim_tarihi değerlerini bugünden itibaren
+    gerçekçi raf ömürlerine göre resetler.
+    """
+    _check_secret(request)
+    sb = get_supabase()
+    today = date_type.today()
+    updated = []
+
+    from datetime import timedelta
+    for product_id, offset_days in EXPIRY_OFFSETS.items():
+        new_date = (today + timedelta(days=offset_days)).isoformat()
+        sb.table("products").update({"son_kullanim_tarihi": new_date}).eq("id", product_id).execute()
+        updated.append({"id": product_id, "son_kullanim_tarihi": new_date})
+
+    log_ai("reset_expiry_dates", "cron:reset_expiry_dates", {"updated_count": len(updated)})
+    return {"status": "ok", "updated": updated}

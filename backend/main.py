@@ -110,6 +110,18 @@ async def _run_stock_check():
         print(f"[SCHEDULER] stock_check HATA: {exc}")
 
 
+async def _run_reset_expiry_dates():
+    """Her Pazartesi 00:01 — ürün son kullanım tarihlerini gerçekçi raf ömürlerine göre resetle."""
+    try:
+        from routers.cron import reset_expiry_dates
+        class _FakeReq:
+            headers = {"x-cron-secret": _get_secret()}
+        result = await reset_expiry_dates(_FakeReq())
+        print(f"[SCHEDULER] 🗓️ {len(result['updated'])} ürünün son kullanım tarihi güncellendi.")
+    except Exception as exc:
+        print(f"[SCHEDULER] reset_expiry_dates HATA: {exc}")
+
+
 def _get_secret() -> str:
     from config import settings
     return settings.cron_secret or ""
@@ -129,6 +141,8 @@ async def start_scheduler():
     scheduler.add_job(_run_waste_prevention,   CronTrigger(hour="*/6", minute=0))
     # Her 30 dakikada bir — stok kontrolü
     scheduler.add_job(_run_stock_check,        CronTrigger(minute="*/30"))
+    # Her Pazartesi 00:01 — son kullanım tarihlerini resetle
+    scheduler.add_job(_run_reset_expiry_dates, CronTrigger(day_of_week="mon", hour=0, minute=1))
 
     scheduler.start()
     print("[SCHEDULER] ✅ Zamanlanmış görevler aktif:")
