@@ -1,43 +1,4 @@
-<<<<<<< HEAD
-﻿# CoopNet
-
-**CoopNet**, Üreten Kadınlar Kooperatifi için geliştirilen, tarımsal kooperatif operasyonlarını yapay zeka destekli bir platformda yöneten bir projedir.
-
----
-
-## Proje Adı ve Kısa Açıklama
-
-- **Proje Adı:** CoopNet
-- **Kısa Açıklama:** Depo yönetimi, üretici iletişimi, görev takibi ve AI raporlamayı tek bir sistemde toplayan kooperatif yönetim uygulaması.
-
----
-
-## Projenin Amacı
-
-CoopNet’in amacı, tarımsal kooperatiflerin günlük operasyonlarını dijitalleştirerek hataları azaltmak, süreçleri hızlandırmak ve yapay zeka destekli öngörülerle karar almayı kolaylaştırmaktır.
-
----
-
-## Çözülen Problem
-
-- Manuel Excel ve kağıt bazlı stok takip süreçleri
-- Telefon / WhatsApp üzerinden dağınık üretici iletişimi
-- Vardiya ve görev atamalarının gecikmeli veya hatalı yapılması
-- Kritik stok seviyelerinin zamanında fark edilmemesi
-- AI destekli raporlama ve otomasyon eksikliği
-
----
-
-## Kullanıcı Akışı
-
-1. Kullanıcı tarayıcıda `http://localhost:3000` adresindeki login sayfasına gelir.
-2. Login başarılı olduğunda `dashboard` ana ekranı açılır.
-3. Dashboard’da stok durumu, açık talepler, görevler, AI raporları ve üretici mesajları takip edilir.
-4. Üretici WhatsApp üzerinden mesaj gönderdiğinde backend bu mesajı işler.
-5. AI ajanı kritik stok, onay bekleyen talepler ve haftalık özet için aksiyon önerir.
-6. Gerekirse yönetici dashboard üzerinden görevi onaylar veya düzenler.
-=======
-# 🌿 CoopNet
+﻿# 🌿 CoopNet
 
 <p align="center">
   <strong>Tarım kooperatifleri için yapay zeka destekli operasyon, stok ve görev yönetim platformu.</strong>
@@ -139,7 +100,6 @@ Kooperatif Dashboard
 Depo · Talepler · Üreticiler · Finansal Raporlar
 Anomali · AI Raporları · AI Logs · Üretici Mesaj · Vardiya
 ```
->>>>>>> d5461e8fa84363311f5b4ec81c6a2848401db055
 
 1. Kullanıcı uygulamayı açar; CoopNet marka deneyimiyle karşılaşır.
 2. Hesabı varsa login sayfasına geçer, yoksa davet talep formuna yönlenir.
@@ -306,7 +266,6 @@ Tüm sayfalarda ortak gerçek zamanlı bildirim sistemi bulunur; belirli aralık
 
 ## Sayfalar ve Modüller
 
-<<<<<<< HEAD
 ### Frontend
 - `src/app/login/` — Giriş ekranı
 - `src/app/invite/` — Davet talep formu
@@ -496,11 +455,8 @@ CoopNet/
 
 ---
 
-## Environment Değişkenleri
+## Gemini AI Ajan Mimarisi
 
-Örnek `.env` içeriği:
-
-=======
 Gemini üç farklı amaçla kullanılır:
 
 ### 1. Chat Ajanı
@@ -813,7 +769,6 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
 **Backend** — `backend/.env`:
->>>>>>> d5461e8fa84363311f5b4ec81c6a2848401db055
 ```env
 GEMINI_API_KEY=your_gemini_api_key
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
@@ -823,7 +778,7 @@ TWILIO_ACCOUNT_SID=your_twilio_account_sid
 TWILIO_AUTH_TOKEN=your_twilio_auth_token
 TWILIO_WHATSAPP_FROM=your_twilio_whatsapp_number
 MANAGER_WHATSAPP=your_manager_whatsapp_number
-<<<<<<< HEAD
+
 ```
 
 > Gizli anahtarları README'ye yazmayın.
@@ -895,9 +850,6 @@ Sonra Twilio webhook URL’sini şu şekilde ayarlayın:
 
 ```text
 https://<tunnel-id>.ngrok-free.app/api/webhook/whatsapp
-=======
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
 ### 5. Supabase Şemasını Kur
@@ -939,7 +891,6 @@ ngrok http 8000
 Twilio webhook URL'ini şu şekilde ayarla:
 ```
 https://xxxxx.ngrok-free.app/api/webhook/whatsapp
->>>>>>> d5461e8fa84363311f5b4ec81c6a2848401db055
 ```
 
 ---
@@ -1041,4 +992,4 @@ CoopNet, kooperatiflerin manuel, dağınık ve gecikmeli operasyon süreçlerini
 Kooperatif yöneticisi yalnızca mevcut durumu görmekle kalmaz; AI tarafından önerilen aksiyonları, kritik stok uyarılarını, üretici mesajlarını, görev atamalarını ve operasyon raporlarını **tek panelden** yönetir.
 
 > **Kooperatifler için yapay zeka destekli, proaktif, güvenilir ve uygulanabilir bir operasyon merkezi oluşturmak.**
->>>>>>> d5461e8fa84363311f5b4ec81c6a2848401db055
+
