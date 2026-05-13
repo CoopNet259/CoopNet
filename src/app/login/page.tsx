@@ -78,8 +78,8 @@ export default function LoginPage() {
 
           <div className="login-welcome">
             <p className="ob-eyebrow login-eyebrow">Kooperatif hesabınızla giriş yapın</p>
-            <h2 className="login-heading">{"CoopNet hesabinizi hizlica acin"}</h2>
-
+            <h2 className="login-heading">{"CoopNet hesabınızı hızlıca açın"}</h2>
+            
           </div>
 
           <form className="login-form" onSubmit={handleSubmit}>
