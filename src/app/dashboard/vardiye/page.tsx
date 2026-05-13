@@ -269,14 +269,14 @@ export default function VardiyePage() {
           <div className="header-coop-title">
             <span style={{ fontSize: 22 }}>📅</span>
             <div>
-              <h2 className="header-coop-name">Vardiye Yönetimi</h2>
+              <h2 className="header-coop-name">Vardiya Yönetimi</h2>
               <p className="header-coop-sub">Personel takibi, görev atama ve haftalık program</p>
             </div>
           </div>
           <div className="header-actions">
             <NotifBell />
             <button className="vrd-btn-primary" onClick={() => setShowModal(true)}>
-              <Icon d={icons.plus} size={15} /> Vardiye Ekle
+              <Icon d={icons.plus} size={15} /> Vardiya Ekle
             </button>
           </div>
         </header>
@@ -295,7 +295,7 @@ export default function VardiyePage() {
             {loadingDuty ? (
               <div className="duty-loading">Yükleniyor…</div>
             ) : onDuty.length === 0 ? (
-              <div className="duty-empty">Bugün için vardiye kaydı yok</div>
+              <div className="duty-empty">Bugün için vardiya kaydı yok</div>
             ) : (
               <div className="duty-chips">
                 {onDuty.map(e => (
@@ -549,7 +549,7 @@ export default function VardiyePage() {
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Vardiye Ekle</h3>
+              <h3>Vardiya Ekle</h3>
               <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
             </div>
 
@@ -571,7 +571,7 @@ export default function VardiyePage() {
                   onChange={e => setForm(f => ({ ...f, tarih: e.target.value }))} />
               </label>
 
-              <label>Vardiye Tipi
+              <label>Vardiya Tipi
                 <select value={form.vardiye_turu} onChange={e => onVardiyeChange(e.target.value)}>
                   <option value="sabah">☀️ Sabah (08:00 – 16:00)</option>
                   <option value="tam_gun">🌤 Tam Gün (08:00 – 18:00)</option>
