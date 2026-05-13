@@ -75,12 +75,37 @@
   box-shadow: 4px 0 24px rgba(0,0,0,0.18);
 }
 
+/* Emoji background pattern for sidebar */
+.sidebar-emoji-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.15;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0;
+  align-content: start;
+  font-size: 48px;
+  line-height: 1;
+  overflow: hidden;
+}
+
+.sidebar-emoji-bg span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
 .sidebar-logo {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 20px 18px 14px;
   border-bottom: 1px solid rgba(255,255,255,0.07);
+  position: relative;
+  z-index: 1;
 }
 
 .logo-mark {
@@ -121,6 +146,8 @@
   border-radius: var(--radius-md);
   padding: 8px 12px;
   min-width: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .coop-name-icon { font-size: 14px; }
@@ -142,6 +169,8 @@
   overflow-y: auto;
   padding: 8px 0;
   scrollbar-width: none;
+  position: relative;
+  z-index: 1;
 }
 .sidebar nav::-webkit-scrollbar { display: none; }
 
@@ -180,15 +209,7 @@
 
 /* Sidebar deco */
 .sidebar-deco {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px 12px;
-  opacity: 0.2;
-  font-size: 14px;
-  pointer-events: none;
+  display: none;
 }
 
 /* Footer */
@@ -198,6 +219,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  position: relative;
+  z-index: 1;
 }
 
 .user-chip {

@@ -188,8 +188,8 @@ export default function DashboardPage() {
           ))}
         </nav>
 
-        <div className="sidebar-deco">
-          {['🌾','🍅','🌿','🫑','🍆'].map((e, i) => <span key={i}>{e}</span>)}
+        <div className="sidebar-emoji-bg">
+          {[...Array(12)].flatMap(() => ['🌾','🍅','🌿','🫑','🍆']).map((e, i) => <span key={i}>{e}</span>)}
         </div>
 
         <div className="sidebar-footer">
