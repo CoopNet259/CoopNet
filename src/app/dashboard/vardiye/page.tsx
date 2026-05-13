@@ -305,7 +305,7 @@ export default function VardiyePage() {
                       <span className="duty-name">{e.ad}</span>
                       <span className="duty-rol">{e.departman_label} · {e.vardiye_label}</span>
                     </div>
-                    <span className="duty-time">{e.baslangic}–{e.bitis}</span>
+                    <span className="duty-time">{e.baslangic.slice(0,5)}–{e.bitis.slice(0,5)}</span>
                   </div>
                 ))}
               </div>
@@ -386,7 +386,7 @@ export default function VardiyePage() {
                                     <span className="cal-shift-avatar">{e.avatar}</span>
                                     <div className="cal-shift-info">
                                       <span className="cal-shift-name">{e.ad}</span>
-                                      <span className="cal-shift-time">{e.baslangic}–{e.bitis}</span>
+                                      <span className="cal-shift-time">{e.baslangic.slice(0,5)}–{e.bitis.slice(0,5)}</span>
                                     </div>
                                     <span className="cal-shift-badge" style={{ background: e.vardiye_color }}>
                                       {e.vardiye === 'sabah' ? 'S' : e.vardiye === 'tam_gun' ? 'T' : 'Ö'}
@@ -435,7 +435,7 @@ export default function VardiyePage() {
                       {dutyEntry ? (
                         <div className="emp-duty-now">
                           <span className="emp-duty-dot" />
-                          <span>Görevde · {dutyEntry.baslangic}–{dutyEntry.bitis}</span>
+                          <span>Görevde · {dutyEntry.baslangic.slice(0,5)}–{dutyEntry.bitis.slice(0,5)}</span>
                         </div>
                       ) : (
                         <div className="emp-not-duty">Şu an vardiyede değil</div>
