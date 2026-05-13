@@ -404,3 +404,15 @@ ngrok http 8000
 CoopNet, kooperatiflerin manuel ve dağınık süreçlerini merkezi, akıllı ve denetlenebilir bir platforma taşır. Yönetici yalnızca mevcut durumu görmekle kalmaz; AI tarafından üretilen aksiyonları, stok uyarılarını, üretici mesajlarını ve görev atamalarını **tek panelden** yönetir.
 
 > Kooperatifler için yapay zeka destekli, proaktif ve uygulanabilir bir operasyon merkezi.
+
+---
+
+## 🤝 Akademik Dürüstlük ve Referanslar
+
+Bu proje R&D ve Hackathon kapsamında sıfırdan geliştirilmiş olup, kullanılan araçlar şeffaf şekilde aşağıdadır:
+
+- **AI Modeli:** Google Gemini (Flash / Pro)
+- **Mesajlaşma Entegrasyonu:** Twilio API
+- **Veritabanı ve Auth:** Supabase
+
+*Projeye ait tüm AI ajan mimarisi, prompt tasarımları ve FastAPI entegrasyonu ekip tarafından özgün olarak geliştirilmiştir.*
