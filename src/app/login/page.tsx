@@ -78,11 +78,7 @@ export default function LoginPage() {
 
           <div className="login-welcome">
             <p className="ob-eyebrow login-eyebrow">Kooperatif hesabınızla giriş yapın</p>
-<<<<<<< HEAD
-            <h2 class="login-title">CoopNet hesabınızı hızlıca açın</h2>
-=======
-            <h2 className="login-heading">{"CoopNet'inizi hizlica acin"}</h2>
->>>>>>> d5461e8fa84363311f5b4ec81c6a2848401db055
+            <h2 className="login-heading">{"CoopNet hesabinizi hizlica acin"}</h2>
 
           </div>
 
