@@ -66,12 +66,37 @@ const initialKardesUreticiler = [
   { id: 8, ad: 'Tatlıcı Şirin Koop.', lokasyon: 'Mezitli, Mersin', ihtiyac: 'Reçellik Kayısı & İncir', kapasite: '500 kg / Hafta', avatar: 'TŞ' },
 ];
 
+type ModalType = 'talep' | 'mesaj' | 'teklif' | null;
+interface ModalState { type: ModalType; uretici: any | null; sent: boolean; }
+
 export default function UreticilerPage() {
   const router = useRouter();
   const [activeNav, setActiveNav] = useState('ureticiler');
   const [talebeGoreUreticiler, setTalebeGoreUreticiler] = useState<any[]>(initialTalebeGoreUreticiler);
   const [genelUreticiler, setGenelUreticiler] = useState<any[]>(initialGenelUreticiler);
   const [kardesUreticiler, setKardesUreticiler] = useState<any[]>(initialKardesUreticiler);
+  const [modal, setModal] = useState<ModalState>({ type: null, uretici: null, sent: false });
+  const [modalText, setModalText] = useState('');
+
+  const openModal = (type: ModalType, uretici: any) => {
+    let text = '';
+    if (type === 'talep') {
+      text = `Sayın ${uretici.ad},\n\nKooperatifimizin acil stok ihtiyacı nedeniyle sizinle iletişime geçiyoruz.\n\nTalep edilen ürünler: ${(uretici.urunler ?? []).join(', ')}\nTahmini miktar: 200 kg\nTeslim tarihi: En kısa sürede\n\nKapasitenizin (${uretici.kapasite}) uygunluğunu değerlendirerek geri dönmenizi rica ederiz.\n\nSaygılarımızla,\nÜreten Kadınlar Kooperatifi`;
+    } else if (type === 'mesaj') {
+      text = `Sayın ${uretici.ad},\n\nKooperatifimiz adına sizinle iletişime geçmek istedik.\n\nÜrünleriniz (${(uretici.urunler ?? []).join(', ')}) için gelecek sezon işbirliği yapmak istiyoruz. Müsait olduğunuzda görüşmek üzere randevu ayarlayabilir miyiz?\n\nSaygılarımızla,\nÜreten Kadınlar Kooperatifi`;
+    } else if (type === 'teklif') {
+      text = `Sayın ${uretici.ad},\n\nDayanışma ağımız kapsamında sizinle bir teklif paylaşmak istiyoruz.\n\nİhtiyaç duyduğunuz ürünler: ${uretici.ihtiyac}\nMevcut stok fazlası olan ürünlerimiz bu ihtiyacı karşılayabilir.\n\nDetaylar için görüşmek ister misiniz?\n\nSaygılarımızla,\nÜreten Kadınlar Kooperatifi`;
+    }
+    setModalText(text);
+    setModal({ type, uretici, sent: false });
+  };
+
+  const closeModal = () => setModal({ type: null, uretici: null, sent: false });
+
+  const sendModal = () => {
+    setModal(m => ({ ...m, sent: true }));
+    setTimeout(closeModal, 1800);
+  };
 
   useEffect(() => {
     getProducers()
@@ -199,7 +224,7 @@ export default function UreticilerPage() {
                       </div>
                     </div>
                     <div className="uretici-actions">
-                      <button className="btn-siparis" onClick={() => alert(`${uretici.ad} için acil sipariş talebi oluşturuluyor...`)}>
+                      <button className="btn-siparis" onClick={() => openModal('talep', uretici)}>
                         <Icon d={icons.clipboard} size={14} /> Talep Oluştur
                       </button>
                     </div>
@@ -239,7 +264,7 @@ export default function UreticilerPage() {
                       </div>
                     </div>
                     <div className="uretici-actions">
-                      <button className="btn-iletisim" onClick={() => alert(`${uretici.ad} ile iletişime geçiliyor...`)}>
+                      <button className="btn-iletisim" onClick={() => openModal('mesaj', uretici)}>
                         <Icon d={icons.send} size={14} /> Mesaj Gönder
                       </button>
                     </div>
@@ -276,7 +301,7 @@ export default function UreticilerPage() {
                       </div>
                     </div>
                     <div className="uretici-actions">
-                      <button className="btn-iletisim" onClick={() => alert(`${uretici.ad} adlı kardeş üreticiye STK'sı yaklaşan ürünler için teklif iletiliyor...`)}>
+                      <button className="btn-iletisim" onClick={() => openModal('teklif', uretici)}>
                         <Icon d={icons.send} size={14} /> Ürün Teklifi İlet
                       </button>
                     </div>
@@ -288,6 +313,58 @@ export default function UreticilerPage() {
           </div>
         </div>
       </main>
+
+      {/* ═══ MODAL ═══ */}
+      {modal.type && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-box" onClick={e => e.stopPropagation()}>
+            {modal.sent ? (
+              <div className="modal-success">
+                <div className="modal-success-icon">✓</div>
+                <p>{modal.type === 'talep' ? 'Talep gönderildi!' : modal.type === 'mesaj' ? 'Mesaj gönderildi!' : 'Teklif iletildi!'}</p>
+              </div>
+            ) : (
+              <>
+                <div className="modal-header">
+                  <div className="modal-title-row">
+                    <span className="modal-icon">
+                      {modal.type === 'talep' ? '📋' : modal.type === 'mesaj' ? '💬' : '🤝'}
+                    </span>
+                    <div>
+                      <h3 className="modal-title">
+                        {modal.type === 'talep' ? 'Talep Oluştur' : modal.type === 'mesaj' ? 'Mesaj Gönder' : 'Ürün Teklifi İlet'}
+                      </h3>
+                      <p className="modal-subtitle">Alıcı: <strong>{modal.uretici?.ad}</strong> · {modal.uretici?.lokasyon}</p>
+                    </div>
+                  </div>
+                  <button className="modal-close" onClick={closeModal}>✕</button>
+                </div>
+                <div className="modal-body">
+                  <label className="modal-label">
+                    {modal.type === 'talep' ? 'Talep Mesajı' : modal.type === 'mesaj' ? 'Mesajınız' : 'Teklif Metni'}
+                  </label>
+                  <textarea
+                    className="modal-textarea"
+                    value={modalText}
+                    onChange={e => setModalText(e.target.value)}
+                    rows={10}
+                  />
+                  <p className="modal-hint">
+                    {modal.type === 'talep' ? '📱 WhatsApp üzerinden gönderilecek' : modal.type === 'mesaj' ? '📱 WhatsApp veya SMS ile iletilecek' : '📧 E-posta ve WhatsApp ile iletilecek'}
+                  </p>
+                </div>
+                <div className="modal-footer">
+                  <button className="modal-cancel-btn" onClick={closeModal}>İptal</button>
+                  <button className="modal-send-btn" onClick={sendModal}>
+                    <Icon d={icons.send} size={15} />
+                    {modal.type === 'talep' ? 'Talep Gönder' : modal.type === 'mesaj' ? 'Mesajı Gönder' : 'Teklifi İlet'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
