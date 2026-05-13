@@ -987,3 +987,10 @@
   border-color: var(--green-400);
 }
 
+.user-chip-text h4 {
+  color: #ffffff !important;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
